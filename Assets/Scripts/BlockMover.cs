@@ -3,9 +3,9 @@ using UnityEngine;
 public class BlockMover : MonoBehaviour
 {
     [Header("이동 설정")]
-    public float _moveSpeed = 3f;
-    public float _moveRange = 3f;
-    public bool _moveOnX = true;
+    public float moveSpeed = 3f;
+    public float moveRange = 3f;
+    public bool moveOnX = true;
 
     private int _direction = 1;
     private bool _isMoving = true;
@@ -14,7 +14,7 @@ public class BlockMover : MonoBehaviour
     void Start()
     {
         // 시작 위치 저장
-        _startPos = _moveOnX ? transform.position.x : transform.position.z;
+        _startPos = moveOnX ? transform.position.x : transform.position.z;
     }
 
     void Update()
@@ -22,17 +22,17 @@ public class BlockMover : MonoBehaviour
         if (!_isMoving) return;
 
         // 이동 처리
-        float move = _moveSpeed * _direction * Time.deltaTime;
+        float move = moveSpeed * _direction * Time.deltaTime;
 
-        if (_moveOnX)
+        if (moveOnX)
             transform.Translate(move, 0, 0);
         else
             transform.Translate(0, 0, move);
 
 
         // 범위 끝에 닿으면 방향 전환
-        float currentPos = _moveOnX ? transform.position.x : transform.position.z;
-        if (Mathf.Abs(currentPos - _startPos) >= _moveRange)
+        float currentPos = moveOnX ? transform.position.x : transform.position.z;
+        if (Mathf.Abs(currentPos - _startPos) >= moveRange)
             _direction *= -1;
 
     }
