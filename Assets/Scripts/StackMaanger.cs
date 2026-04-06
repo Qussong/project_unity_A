@@ -9,7 +9,8 @@ public class StackManager : MonoBehaviour
     public float blockWidth = 2f;       // 블록 너비 (x)
     public float blockLength = 2f;      // 블록 길이 (z)
     public float blockHeight = 1f;      // 블록 두께 (y)
-    public float moveSpeed = 3f;
+    public float minMoveSpeed = 3f;
+    public float maxMoveSpeed = 10f;
     public float blockPosDistance = 5f;
 
     [Header("UI")]
@@ -25,6 +26,9 @@ public class StackManager : MonoBehaviour
     // 블록 색상 — 층마다 점진적으로 변함
     private Color _blockColor = Color.cyan;
 
+    // 카메라 위치 변경 플래그
+    private bool _bMoveCamera = false;
+
     void Start()
     {
         SpawnBase();    // 바닥 고정 블록
@@ -35,7 +39,8 @@ public class StackManager : MonoBehaviour
     {
         bool isMouseTouched = Input.GetMouseButtonDown(0);
         bool isMobileTouched = Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began;
-        bool bTapped = isMouseTouched || isMobileTouched;
+        bool test = Input.GetKeyDown(KeyCode.Space);
+        bool bTapped = isMouseTouched || isMobileTouched || test;
 
         if (bTapped && _currentBlock != null)
         {
@@ -46,6 +51,15 @@ public class StackManager : MonoBehaviour
         if (false)
         {
             GameOver();
+        }
+    }
+
+    void LateUpdate()
+    {
+        if (_bMoveCamera)
+        {
+            _bMoveCamera = false;
+            MoveCamera();
         }
     }
 
@@ -86,8 +100,8 @@ public class StackManager : MonoBehaviour
 
         // 블록 이동 컴포넌트 세팅
         BlockMover mover = go.AddComponent<BlockMover>();
-        // mover.moveRange = blockPosDistance * 2;
-        mover.moveSpeed = moveSpeed + _score * 0.1f;  // 점수 오를수록 빨라짐
+        // 점수 오를수록 빨라짐
+        mover.moveSpeed = Mathf.Min(minMoveSpeed + _score * 0.05f, maxMoveSpeed);
         mover.moveOnX = _onX;
     }
 
@@ -117,7 +131,7 @@ public class StackManager : MonoBehaviour
         if (Mathf.Abs(offset) < 0.1f)
         {
             // 크기 유지
-            overlap = blockSize;  
+            overlap = blockSize;
 
             // 위치 보정
             Vector3 pos = _currentBlock.transform.localPosition;
@@ -145,8 +159,8 @@ public class StackManager : MonoBehaviour
             float newCenter = lastCenter + offset * 0.5f;
 
             // 조각 크기
-            float debrisSize = _onX 
-                               ? _currentBlock.Width - overlap 
+            float debrisSize = _onX
+                               ? _currentBlock.Width - overlap
                                : _currentBlock.Length - overlap;
 
             // 블록 자르기 실행
@@ -154,20 +168,20 @@ public class StackManager : MonoBehaviour
 
             // 조각 블록 생성
             _currentBlock.SpawnDebris(debrisSize, lastCenter, newCenter, _onX);
-
         }
 
-        // 6. 다음 블록 준비
+        // 점수 갱신
         _score++;
         UpdateScore();
 
+        // 다음 블록 준비
         _lastBlock = _currentBlock;
         _currentBlock = null;
         _currentY += blockHeight;
         _onX = !_onX;   // 다음 층은 반대 축으로 이동
 
         // 카메라 올리기
-        MoveCamera();
+        _bMoveCamera = true;
 
         // 다음 블록 생성
         SpawnNext();
@@ -177,6 +191,7 @@ public class StackManager : MonoBehaviour
     void PerfectEffect()
     {
         Debug.Log("Perfect");
+        //
     }
 
     // 카메라를 블록 높이에 맞춰 올림
