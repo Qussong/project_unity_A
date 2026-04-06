@@ -43,7 +43,7 @@ public class StackManager : MonoBehaviour
         }
 
         // 생성된 블록이 기존 블록을 지나치면 게임 종료
-        if(false)
+        if (false)
         {
             GameOver();
         }
@@ -113,13 +113,15 @@ public class StackManager : MonoBehaviour
             return;
         }
 
-        // 5-1. 완벽히 맞추면 보너스 (0.1 이하 오차는 퍼펙트 처리)
+        // 5-1. 완벽히 맞춘 경우 (0.1 이하 오차는 퍼펙트 처리)
         if (Mathf.Abs(offset) < 0.1f)
         {
-            overlap = blockSize;  // 크기 유지
+            // 크기 유지
+            overlap = blockSize;  
+
             // 위치 보정
             Vector3 pos = _currentBlock.transform.localPosition;
-            if(_onX)
+            if (_onX)
             {
                 pos.x = _lastBlock.transform.localPosition.x;
             }
@@ -128,22 +130,34 @@ public class StackManager : MonoBehaviour
                 pos.z = _lastBlock.transform.localPosition.z;
             }
             _currentBlock.transform.localPosition = pos;
+
             // 이펙트
             PerfectEffect();
         }
         // 5-2. 완벽히 맞추지 못하면
         else
         {
-            // 6. 잘린 블록의 새 중심 위치 계산
-            float newCenter = _onX
-                ? _lastBlock.PosX + offset * 0.5f
-                : _lastBlock.PosZ + offset * 0.5f;
+            float lastCenter = _onX
+                ? _lastBlock.PosX
+                : _lastBlock.PosZ;
 
-            // 7. 블록 자르기 실행
+            // 남은 블록의 새 중심 위치 계산
+            float newCenter = lastCenter + offset * 0.5f;
+
+            // 조각 크기
+            float debrisSize = _onX 
+                               ? _currentBlock.Width - overlap 
+                               : _currentBlock.Length - overlap;
+
+            // 블록 자르기 실행
             _currentBlock.Slice(overlap, newCenter, _onX);
+
+            // 조각 블록 생성
+            _currentBlock.SpawnDebris(debrisSize, lastCenter, newCenter, _onX);
+
         }
 
-        // 8. 다음 블록 준비
+        // 6. 다음 블록 준비
         _score++;
         UpdateScore();
 
@@ -155,6 +169,7 @@ public class StackManager : MonoBehaviour
         // 카메라 올리기
         MoveCamera();
 
+        // 다음 블록 생성
         SpawnNext();
     }
 
@@ -170,14 +185,14 @@ public class StackManager : MonoBehaviour
         Camera.main.transform.position += new Vector3(0, blockHeight, 0);
     }
 
-    // ── 점수 업데이트 ─────────────────────────────────────────────
+    // 점수 업데이트
     void UpdateScore()
     {
         if (scoreText != null)
             scoreText.text = _score.ToString();
     }
 
-    // ── 게임오버 ──────────────────────────────────────────────────
+    // 게임오버
     void GameOver()
     {
         Debug.Log("Game Over! Score: " + _score);
