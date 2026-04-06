@@ -4,7 +4,7 @@ public class Block : MonoBehaviour
 {
     // 현재 블록의 크기와 위치 (외부에서 읽기용)
     public float Width => transform.localScale.x;
-    public float Depth => transform.localScale.z;
+    public float Length => transform.localScale.z;
     public float PosX => transform.position.x;
     public float PosZ => transform.position.z;
 
@@ -20,9 +20,15 @@ public class Block : MonoBehaviour
     // 반환값 : 잘라낸 후 남은 블록 크기 (다음 블록의 크기로 쓰임)
     public float Slice(float overlap, float newCenter, bool onX)
     {
-        float overSize = onX ? Width - overlap : Depth - overlap; // 잘려나갈 조각의 크기
+        // 잘려나갈 조각의 크기
+        // onX = true -> X축 이동
+        // onX = false -> Z축 이동
+        float overSize = onX ? Width - overlap : Length - overlap;
 
-        // 남는 블록 위치, 크기 조정
+        // 잘려나가는 조각 생성 (크기·위치 변경 전에 호출해야 원본 값 사용 가능)
+        SpawnDebris(overSize, newCenter, onX);
+
+        // 겹침 영역에 맞게 블록 크기, 위치 조정
         if (onX)
         {
             transform.localScale = new Vector3(overlap,
@@ -42,19 +48,16 @@ public class Block : MonoBehaviour
                                                 newCenter);
         }
 
-
-        // 잘려나가는 조각 생성
-        SpawnDebris(overSize, newCenter, onX);
-
         return overlap; // 남은 크기 반환 (다음 블록이 이 크기로 생성됨)
     }
 
     private void SpawnDebris(float debrisSize, float newCenter, bool onX)
     {
+        // 조각 생성
         GameObject debris = GameObject.CreatePrimitive(PrimitiveType.Cube);
         debris.name = "Debris";
 
-        // 조각 크기
+        // 조각 크기 설정
         Vector3 debrisScale = transform.localScale;
         if (onX)
             debrisScale.x = debrisSize;
@@ -64,16 +67,17 @@ public class Block : MonoBehaviour
 
         // 조각 위치 계산
         // 남은 블록 중심(newCenter)에서 (남은크기/2 + 조각크기/2) 만큼 바깥으로
+        // debrisCenter = newCenter + remainScale/2 + debrisScale/2
         Vector3 debrisPos = transform.position;
-
         if (onX)
         {
             float remainHalf = debrisScale.x / 2f;
             float debrisHalf = debrisSize / 2f;
+            float center = transform.position.x;
 
-            // newCenter가 원래 위치보다 오른쪽 -> 조각은 외쪽
-            // newCenter가 원래 위치보다 왼쪽 -> 조각은 오른쪽
-            float sign = newCenter > transform.position.x ? -1f : 1f;
+            // newCenter가 원래 위치(center)보다 오른쪽 -> 조각은 왼쪽
+            // newCenter가 원래 위치(center)보다 왼쪽   -> 조각은 오른쪽
+            float sign = newCenter > center ? -1f : 1f;
             debrisPos.x = newCenter + sign * (remainHalf + debrisHalf);
         }
         else
@@ -85,6 +89,7 @@ public class Block : MonoBehaviour
             debrisPos.z = newCenter + sign * (remainHalf + debrisHalf);
         }
 
+        // 조각 위치 설정
         debris.transform.position = debrisPos;
 
         // 색상
@@ -92,8 +97,7 @@ public class Block : MonoBehaviour
 
         // 중력으로 떨어짐
         Rigidbody rb = debris.AddComponent<Rigidbody>();
-        rb.AddForce(new Vector3(UnityEngine.Random.Range(-1f, 1f), -2f,
-                                UnityEngine.Random.Range(-1f, 1f)), ForceMode.Impulse);
+        rb.AddForce(new Vector3(0, -2f, 0), ForceMode.Impulse);
 
         Destroy(debris, 3f);
     }
