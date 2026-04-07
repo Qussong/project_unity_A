@@ -170,6 +170,9 @@ public class StackManager : MonoBehaviour
             _currentBlock.SpawnDebris(debrisSize, lastCenter, newCenter, _onX);
         }
 
+        // 효과음 재생
+        AudioManager.Instance.PlaySFX(AudioManager.Instance.clipBlockPlace);
+
         // 점수 갱신
         _score++;
         // UpdateScore();
@@ -209,11 +212,9 @@ public class StackManager : MonoBehaviour
         // 현재 블록 이동 정지
         _currentBlock.GetComponent<BlockMover>().Stop();
         _currentBlock = null;
+
         // 게임 종료 패널 표시
         uiManager.ShowGameOver();
-
-        // 다음 단계에서 씬 전환 추가
-        // SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
     private bool IsOutBound()
@@ -221,16 +222,16 @@ public class StackManager : MonoBehaviour
         // X축 이동
         if(_onX)
         {
-            float curMin = _currentBlock.PosX - _currentBlock.Width / 2f;
-            float lastMax = _lastBlock.PosX + _lastBlock.Width / 2f;
-            return curMin > lastMax;
+            float curFront = _currentBlock.PosX - _currentBlock.Width / 2f;
+            float lastBack = _lastBlock.PosX + _lastBlock.Width / 2f;
+            return curFront > lastBack;
         }
         // Z축 이동
         else
         {
-            float curMin = _currentBlock.PosZ - _currentBlock.Length / 2f;
-            float lastMax = _lastBlock.PosZ + _currentBlock.Length / 2f;
-            return curMin > lastMax;
+            float curFront = _currentBlock.PosZ - _currentBlock.Length / 2f;
+            float lastBack = _lastBlock.PosZ + _currentBlock.Length / 2f;
+            return curFront > lastBack;
         }
     }
 

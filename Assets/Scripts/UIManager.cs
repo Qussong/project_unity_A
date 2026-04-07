@@ -20,6 +20,7 @@ public class UIManager : MonoBehaviour
     void Start()
     {
         // 저장된 최고 점수 불러오기
+        _bestScore = PlayerPrefs.GetInt("BestScore", 0);
         UpdateBestScoreUI();
 
         // 재시작 버튼 이벤트 연결
@@ -39,7 +40,8 @@ public class UIManager : MonoBehaviour
         if(_currentScore > _bestScore)
         {
             _bestScore = _currentScore;
-            UpdateBestScoreUI();
+            UpdateBestScoreUI();    // 최고점수 UI 표시 갱신
+            SaveBestScore();    // 최고점수 저장
         }
     }
 
@@ -59,6 +61,11 @@ public class UIManager : MonoBehaviour
     private void ReStartGame()
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
+
+    private void SaveBestScore()
+    {
+        PlayerPrefs.SetInt("BestScore", _bestScore);
     }
 
 }
