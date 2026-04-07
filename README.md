@@ -10,7 +10,7 @@
 | 플랫폼 | PC · Mobile |
 | 엔진 | Unity 6 (URP) |
 | 언어 | C# |
-| 버전 | 0.2.0 |
+| 버전 | 0.3.0 |
 
 ---
 
@@ -21,17 +21,17 @@
 | `[📷 이미지 배치 예정 - 메인 게임 플레이]` |
 
 ```
-[시작] → [게임 플레이] → [게임 오버]
-                ↑               |
-                └───────────────┘ (씬 재로드)
+[시작] → [게임 플레이] → [게임 오버 패널]
+                ↑                    |
+                └────────────────────┘ (Restart 버튼 → 씬 재로드)
 ```
 
 | 화면 | 설명 |
 |---|---|
-| 게임 플레이 | 블록 이동 → 탭으로 정지 → 겹침 판정 → 슬라이싱 반복 |
-| 게임 오버 | 블록을 완전히 놓쳤을 때 씬 재로드로 재시작 |
+| 게임 플레이 | 블록 이동 → 탭으로 정지 → 겹침 판정 → 슬라이싱 반복, 점수·최고점수 실시간 표시 |
+| 게임 오버 패널 | 최종 점수 표시 + Restart 버튼으로 씬 재로드 |
 
-- 게임 오버 시 현재 씬을 즉시 재로드하여 재시작
+- 게임 오버 시 패널이 페이드인으로 나타나고, Restart 버튼으로 재시작
 
 ---
 
@@ -45,7 +45,8 @@
 | 퍼펙트 판정 | 오차 0.1 이내 시 크기 유지 및 위치 자동 보정 |
 | 누적 스택 | 잔류 블록 위에 다음 블록 생성, 카메라 자동 상승 |
 | 색상 변화 | HSV 색상환을 따라 층마다 블록 색상 점진 변화 |
-| 점수 UI | TextMeshPro로 현재 점수 실시간 표시 |
+| 점수 UI | 현재 점수·최고 점수 실시간 표시 (TextMeshPro) |
+| 게임오버 패널 | 최종 점수 표시, Restart 버튼으로 씬 재로드 |
 
 ---
 
@@ -59,7 +60,7 @@
 | 블록 데이터 | 블록 크기·위치 관리, 슬라이싱 연산, Debris 생성 | `Block` |
 | 블록 이동 | X/Z축 왕복 이동, 정지 처리 | `BlockMover` |
 | 유틸리티 | 블록 색상 설정 | `ColorModifier` |
-| UI | 점수 표시 | `TextMeshProUGUI` (StackManager에서 참조) |
+| UI 매니저 | 점수·최고점수 표시, 게임오버 패널 제어, 재시작 처리 | `UIManager` |
 
 ---
 
@@ -77,6 +78,7 @@ ProjectA/
 │   │   ├── Block.cs                   # 블록 데이터·슬라이싱 로직
 │   │   ├── BlockMover.cs              # 블록 이동·정지 처리
 │   │   ├── ColorModifier.cs           # 블록 색상 설정
+│   │   ├── UIManager.cs              # UI 관리 (점수, 게임오버 패널, 재시작)
 │   │   └── InputManager.cs            # 입력 감지 (미사용, StackManager로 이관)
 │   └── Settings/
 │       ├── Mobile_RPAsset.asset       # URP 모바일 설정
@@ -94,9 +96,13 @@ ProjectA/
     └─▶ StackManager.PlaceBlock()
             ├─▶ BlockMover.Stop()          — 블록 정지
             ├─▶ 겹침(overlap) 계산
-            │       ├─ overlap ≤ 0         → GameOver (씬 재로드)
+            │       ├─ overlap ≤ 0         → GameOver
+            │       │                         └─▶ UIManager.ShowGameOver()
+            │       │                                └─▶ 게임오버 패널 표시
+            │       │                                     └─▶ Restart 버튼 → 씬 재로드
             │       ├─ offset < 0.1        → 퍼펙트 판정 (크기 유지)
             │       └─ 그 외              → Block.Slice() → Debris 낙하
+            ├─▶ UIManager.AddScore()       — 점수·최고점수 갱신
             └─▶ SpawnNext()                — 다음 블록 생성
 ```
 
@@ -106,6 +112,7 @@ ProjectA/
 
 | 날짜 | 내용 |
 |---|---|
+| 2026-04-07 | UIManager 클래스 추가 (점수·최고점수 UI, 게임오버 패널, 재시작 버튼) |
 | 2026-04-06 | 난이도 속도 증가에 상한선 추가 (minMoveSpeed·maxMoveSpeed Inspector 노출), 선형 증가 계수 0.1→0.05 조정 |
 | 2026-04-06 | StackManager·Block 핵심 로직 구현 (슬라이싱, 퍼펙트 판정, 점수 UI, 카메라 추적) |
 | 2026-04-04 | 프로젝트 초기 세팅, BlockMover 이동·정지 구현, InputManager 추가 |

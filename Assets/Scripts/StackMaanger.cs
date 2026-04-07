@@ -1,6 +1,5 @@
 using UnityEngine;
-using TMPro;
-using System.IO;
+using UnityEngine.SceneManagement;
 
 public class StackManager : MonoBehaviour
 {
@@ -14,7 +13,8 @@ public class StackManager : MonoBehaviour
     public float blockPosDistance = 5f;
 
     [Header("UI")]
-    public TextMeshProUGUI scoreText;
+    // public TextMeshProUGUI scoreText;
+    public UIManager uiManager;
 
     // 내부 상태
     private Block _lastBlock;       // 직전에 놓인 블록
@@ -172,7 +172,8 @@ public class StackManager : MonoBehaviour
 
         // 점수 갱신
         _score++;
-        UpdateScore();
+        // UpdateScore();
+        uiManager.AddScore();
 
         // 다음 블록 준비
         _lastBlock = _currentBlock;
@@ -200,19 +201,17 @@ public class StackManager : MonoBehaviour
         Camera.main.transform.position += new Vector3(0, blockHeight, 0);
     }
 
-    // 점수 업데이트
-    void UpdateScore()
-    {
-        if (scoreText != null)
-            scoreText.text = _score.ToString();
-    }
-
     // 게임오버
     void GameOver()
     {
-        Debug.Log("Game Over! Score: " + _score);
+        Debug.Log("Game Over!");
+        
+        // 현재 블록 이동 정지
+        _currentBlock.GetComponent<BlockMover>().Stop();
+        // 게임 종료 패널 표시
+        uiManager.ShowGameOver();
+
         // 다음 단계에서 씬 전환 추가
-        UnityEngine.SceneManagement.SceneManager.LoadScene(
-            UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+        // SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 }
