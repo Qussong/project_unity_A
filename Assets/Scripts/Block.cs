@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class Block : MonoBehaviour
@@ -76,6 +77,59 @@ public class Block : MonoBehaviour
         Rigidbody rb = debris.AddComponent<Rigidbody>();
         rb.AddForce(new Vector3(0, -2f, 0), ForceMode.Impulse);
 
+        // 조각에 탄성 부여
+        PhysicsMaterial bounceMat = new PhysicsMaterial();
+        bounceMat.bounciness = 0.5f;
+        bounceMat.dynamicFriction = 0.2f;
+        bounceMat.staticFriction = 0.2f;
+        bounceMat.bounceCombine = PhysicsMaterialCombine.Maximum;
+        debris.GetComponent<Collider>().material = bounceMat;
+
+        // 3초 후 파괴
         Destroy(debris, 3f);
+    }
+
+    // 떡 효과
+    public void PlayBounceEffect()
+    {
+        StartCoroutine(BounceCoroutine());
+    }
+
+    private IEnumerator BounceCoroutine()
+    {
+        float origScaleY = transform.localScale.y;
+        float origPosY   = transform.localPosition.y;
+
+        // (목표 상대 스케일, 지속 시간) 키프레임
+        float[] scales    = { 0.78f, 1.06f, 0.98f, 1.00f };
+        float[] durations = { 0.08f, 0.13f, 0.07f, 0.05f };
+
+        float prev = 1.0f;
+        for (int i = 0; i < scales.Length; i++)
+        {
+            float elapsed = 0f;
+            float start = prev;
+            while (elapsed < durations[i])
+            {
+                elapsed += Time.deltaTime;
+                float rel = Mathf.Lerp(start, scales[i], elapsed / durations[i]);
+
+                Vector3 s = transform.localScale;
+                s.y = origScaleY * rel;
+                transform.localScale = s;
+
+                // 바닥 위치 고정 (위로만 튕김)
+                Vector3 p = transform.localPosition;
+                p.y = origPosY - (origScaleY - s.y) / 2f;
+                transform.localPosition = p;
+
+                yield return null;
+            }
+            prev = scales[i];
+        }
+
+        // 정확히 원래 값으로 복원
+        Vector3 fs = transform.localScale; fs.y = origScaleY; transform.localScale = fs;
+        Vector3 fp = transform.localPosition; fp.y = origPosY; transform.localPosition = fp;
     }
 }

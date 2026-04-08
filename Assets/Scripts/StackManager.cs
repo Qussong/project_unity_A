@@ -1,3 +1,4 @@
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class StackManager : MonoBehaviour
@@ -67,7 +68,7 @@ public class StackManager : MonoBehaviour
     void SetupBaseBlock()
     {
         _lastBlock = baseBlock.AddComponent<Block>();
-        baseBlock.GetComponent<Renderer>().material.color = Color.gray;
+        baseBlock.GetComponent<Renderer>().material.color = Color.white;
         _currentY = blockHeight / 2f;  // 다음 블록 Y 위치
     }
 
@@ -77,8 +78,10 @@ public class StackManager : MonoBehaviour
         // 블록 색상 점진 변화 (HSV 회전)
         float h, s, v;
         Color.RGBToHSV(_blockColor, out h, out s, out v);
-        h = (h + 0.05f) % 1f;
-        _blockColor = Color.HSVToRGB(h, 0.7f, 0.95f);
+        // h = (h + 0.05f) % 1f;
+        // _blockColor = Color.HSVToRGB(h, 0.7f, 0.95f);
+        h = (h + 0.07f) % 1f;
+        _blockColor = Color.HSVToRGB(h, 0.35f, 0.98f);
 
         // 시작 위치 — 이동 축 반대편 끝에서 시작
         Vector3 startPos = new Vector3(
@@ -125,8 +128,8 @@ public class StackManager : MonoBehaviour
             return;
         }
 
-        // 5-1. 완벽히 맞춘 경우 (0.1 이하 오차는 퍼펙트 처리)
-        if (Mathf.Abs(offset) < 0.1f)
+        // 5-1. 완벽히 맞춘 경우 (5% 미만의 오차는 퍼펙트 처리)
+        if (Mathf.Abs(offset) / blockSize < 0.05f)
         {
             // 크기 유지
             overlap = blockSize;
@@ -172,6 +175,8 @@ public class StackManager : MonoBehaviour
         AudioManager.Instance.PlaySFX(AudioManager.Instance.clipBlockPlace);
         // 이펙트 
         PlayStackEffect(_currentBlock.transform.localPosition);
+        // 떡 효과
+        _currentBlock.PlayBounceEffect();
 
         // 점수 갱신
         _score++;

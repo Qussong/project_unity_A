@@ -48,10 +48,12 @@
 | 블록 왕복 이동 | X축·Z축 교대로 `-moveRange`~`+moveRange` 범위를 왕복, 점수에 비례해 속도 증가 (`minMoveSpeed`~`maxMoveSpeed`) |
 | 탭 입력 감지 | 마우스 클릭·모바일 터치·스페이스바 통합 처리 후 블록 정지 |
 | 블록 슬라이싱 | 겹친 영역만 잔류, 초과 부분은 Debris로 분리 후 중력 낙하 |
-| 퍼펙트 판정 | 오차 0.1 이내 시 크기 유지 및 위치 자동 보정 |
+| 퍼펙트 판정 | 오차 5% 미만 시 크기 유지 및 위치 자동 보정 |
 | 겹침 없음 게임오버 | 탭 시 이전 블록과 겹치는 영역이 없으면 게임오버 |
 | 누적 스택 | 잔류 블록 위에 다음 블록 생성, 카메라 자동 상승 |
-| 색상 변화 | HSV 색상환을 따라 층마다 블록 색상 점진 변화 |
+| 색상 변화 | HSV 색상환을 따라 층마다 파스텔톤으로 블록 색상 점진 변화 (S=0.35, V=0.98) |
+| 블록 탄성 | 블록 배치 시 Y 스케일 squish→spring 코루틴으로 떡 눌리는 탄성 표현 |
+| Debris 탄성 | 잘린 조각에 PhysicsMaterial 적용, 바닥 충돌 시 통통 튕김 |
 | 점수 UI | 현재 점수·최고 점수 실시간 표시 (TextMeshPro) |
 | 게임오버 패널 | 최종 점수 표시, Restart 버튼으로 씬 재로드 |
 | BGM·효과음 | BGM 루프 재생, 블록 배치 시 효과음 재생 (`AudioManager` 싱글턴, 3채널) |
@@ -65,7 +67,7 @@
 | 레이어 | 역할 | 주요 클래스 |
 |---|---|---|
 | 게임 매니저 | 입력 감지, 블록 생성·배치, 슬라이싱 판정, 점수·게임오버 관리 | `StackManager` |
-| 블록 데이터 | 블록 크기·위치 관리, 슬라이싱 연산, Debris 생성 | `Block` |
+| 블록 데이터 | 블록 크기·위치 관리, 슬라이싱 연산, Debris 생성, 탄성 애니메이션 | `Block` |
 | 블록 이동 | X/Z축 왕복 이동, 범위 끝 방향 반전, 정지 처리 | `BlockMover` |
 | 유틸리티 | 블록 색상 설정 | `ColorModifier` |
 | UI 매니저 | 점수·최고점수 표시, 게임오버 패널 제어, 재시작 처리 | `UIManager` |
@@ -86,6 +88,7 @@ ProjectA/
 │   │   ├── StackManager.cs            # 게임 루프 총괄 매니저
 │   │   ├── Block.cs                   # 블록 데이터·슬라이싱 로직
 │   │   ├── BlockMover.cs              # 블록 왕복 이동·정지 처리
+│   │   ├── InputManager.cs            # 입력 감지 (미사용, StackManager 내장)
 │   │   ├── ColorModifier.cs           # 블록 색상 설정
 │   │   ├── UIManager.cs               # UI 관리 (점수, 게임오버 패널, 재시작)
 │   │   └── AudioManager.cs            # BGM·SFX 재생 관리 (싱글턴)
@@ -108,7 +111,7 @@ ProjectA/
             ├─▶ 겹침(overlap) 계산
             │       ├─ overlap ≤ 0         → GameOver()
             │       │                         └─▶ UIManager.ShowGameOver()
-            │       ├─ |offset| < 0.1      → 퍼펙트 판정 (크기 유지 + 위치 보정)
+            │       ├─ |offset|/blockSize < 0.05 → 퍼펙트 판정 (크기 유지 + 위치 보정)
             │       └─ 그 외              → Block.Slice() + Block.SpawnDebris()
             ├─▶ UIManager.AddScore()       — 점수·최고점수 갱신
             └─▶ SpawnNext()                — 다음 블록 생성 + 카메라 상승
@@ -120,6 +123,10 @@ ProjectA/
 
 | 날짜 | 내용 |
 |---|---|
+| 2026-04-09 | 퍼펙트 판정 오차율 10% → 5%로 조정 |
+| 2026-04-09 | 블록 배치 시 squish·spring 탄성 애니메이션 추가 (`Block.PlayBounceEffect`) |
+| 2026-04-09 | Debris에 PhysicsMaterial 적용, 바닥 탄성 처리 (`bounciness=0.5`) |
+| 2026-04-09 | 블록 색상 파스텔톤으로 변경 (HSV S=0.35, V=0.98, h 간격 0.07) |
 | 2026-04-08 | 블록 왕복 이동으로 변경 (BlockMover 방향 반전), 경계 이탈 게임오버 제거 → 겹침 없음 시에만 게임오버 |
 | 2026-04-08 | AudioManager 추가 (BGM 루프·효과음 싱글턴, AudioSource 3채널 구성) |
 | 2026-04-08 | 최고 점수 PlayerPrefs 영구 저장 구현 (`SaveBestScore` / `PlayerPrefs.GetInt`) |
