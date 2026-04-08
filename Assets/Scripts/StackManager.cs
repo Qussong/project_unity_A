@@ -1,20 +1,25 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class StackManager : MonoBehaviour
 {
+    [Header("Setting")]
+    public GameObject parentObj;        // 생성된 블록의 부모 오브젝트
+    public GameObject baseBlock;        // 첫번째 블록
+
     [Header("블록 설정")]
     public GameObject blockPrefab;
     public float blockWidth = 2f;       // 블록 너비 (x)
     public float blockLength = 2f;      // 블록 길이 (z)
     public float blockHeight = 1f;      // 블록 두께 (y)
-    public float minMoveSpeed = 3f;
-    public float maxMoveSpeed = 10f;
-    public float blockPosDistance = 5f;
+    public float minMoveSpeed = 3f;     // 시작 속도
+    public float maxMoveSpeed = 10f;    // 최대 속도
+    public float blockPosDistance = 3f;
 
     [Header("UI")]
-    // public TextMeshProUGUI scoreText;
     public UIManager uiManager;
+
+    [Header("Effect")]
+    [SerializeField] private ParticleSystem _stackEffectPrefab;
 
     // 내부 상태
     private Block _lastBlock;       // 직전에 놓인 블록
@@ -31,8 +36,8 @@ public class StackManager : MonoBehaviour
 
     void Start()
     {
-        SpawnBase();    // 바닥 고정 블록
-        SpawnNext();    // 첫 번째 움직이는 블록
+        SetupBaseBlock();   // 바닥 고정 블록 설정
+        SpawnNext();        // 첫 번째 움직이는 블록
     }
 
     void Update()
@@ -47,11 +52,6 @@ public class StackManager : MonoBehaviour
             PlaceBlock();
         }
 
-        // 생성된 블록이 기존 블록을 지나치면 게임 종료
-        if (_currentBlock != null && IsOutBound())
-        {
-            GameOver();
-        }
     }
 
     void LateUpdate()
@@ -64,14 +64,11 @@ public class StackManager : MonoBehaviour
     }
 
     // 바닥 블록 (움직이지 않는 기준 블록) 생성
-    void SpawnBase()
+    void SetupBaseBlock()
     {
-        GameObject go = Instantiate(blockPrefab);
-        _lastBlock = go.GetComponent<Block>();
-        _lastBlock.Init(Vector3.zero,
-                       new Vector3(blockWidth, blockHeight, blockLength),
-                       Color.gray);
-        _currentY = blockHeight;  // 다음 블록은 이 위에
+        _lastBlock = baseBlock.AddComponent<Block>();
+        baseBlock.GetComponent<Renderer>().material.color = Color.gray;
+        _currentY = blockHeight / 2f;  // 다음 블록 Y 위치
     }
 
     // 다음 블록 생성
@@ -94,15 +91,16 @@ public class StackManager : MonoBehaviour
                                     blockHeight,
                                     _lastBlock.Length);
 
-        GameObject go = Instantiate(blockPrefab, startPos, Quaternion.identity);
+        GameObject go = Instantiate(blockPrefab, startPos, Quaternion.identity, parentObj.transform);
         _currentBlock = go.GetComponent<Block>();
         _currentBlock.Init(startPos, scale, _blockColor);
 
         // 블록 이동 컴포넌트 세팅
         BlockMover mover = go.AddComponent<BlockMover>();
         // 점수 오를수록 빨라짐
-        mover.moveSpeed = Mathf.Min(minMoveSpeed + _score * 0.05f, maxMoveSpeed);
+        mover.moveSpeed = Mathf.Min(minMoveSpeed + _score * 0.01f, maxMoveSpeed);
         mover.moveOnX = _onX;
+        mover.moveRange = blockPosDistance;
     }
 
     // 탭 시: 겹침 계산 → 자르기 → 다음 블록 생성
@@ -172,6 +170,8 @@ public class StackManager : MonoBehaviour
 
         // 효과음 재생
         AudioManager.Instance.PlaySFX(AudioManager.Instance.clipBlockPlace);
+        // 이펙트 
+        PlayStackEffect(_currentBlock.transform.localPosition);
 
         // 점수 갱신
         _score++;
@@ -208,7 +208,7 @@ public class StackManager : MonoBehaviour
     void GameOver()
     {
         Debug.Log("Game Over!");
-        
+
         // 현재 블록 이동 정지
         _currentBlock.GetComponent<BlockMover>().Stop();
         _currentBlock = null;
@@ -217,22 +217,12 @@ public class StackManager : MonoBehaviour
         uiManager.ShowGameOver();
     }
 
-    private bool IsOutBound()
+    private void PlayStackEffect(Vector3 position)
     {
-        // X축 이동
-        if(_onX)
-        {
-            float curFront = _currentBlock.PosX - _currentBlock.Width / 2f;
-            float lastBack = _lastBlock.PosX + _lastBlock.Width / 2f;
-            return curFront > lastBack;
-        }
-        // Z축 이동
-        else
-        {
-            float curFront = _currentBlock.PosZ - _currentBlock.Length / 2f;
-            float lastBack = _lastBlock.PosZ + _currentBlock.Length / 2f;
-            return curFront > lastBack;
-        }
+        ParticleSystem effect = Instantiate(_stackEffectPrefab, position, Quaternion.Euler(90, 0, 0), parentObj.transform);
+        effect.Play();
+
+        Destroy(effect.gameObject, 1.5f);
     }
 
 }

@@ -22,12 +22,6 @@ public class Block : MonoBehaviour
     // 반환값 : 잘라낸 후 남은 블록 크기 (다음 블록의 크기로 쓰임)
     public void Slice(float overlap, float newCenter, bool onX)
     {
-        // 조각의 크기
-        // _debrisSize = onX ? Width - overlap : Length - overlap;
-
-        // 잘려나가는 조각 생성 (크기·위치 변경 전에 호출해야 원본 값 사용 가능)
-        // SpawnDebris(debrisSize, newCenter, onX);
-
         // 겹침 영역에 맞게 블록 크기, 위치 조정
         if (onX)
         {

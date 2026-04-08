@@ -1,4 +1,3 @@
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class AudioManager : MonoBehaviour
@@ -10,10 +9,15 @@ public class AudioManager : MonoBehaviour
 
     [Header("Sound Effect")]
     public AudioClip clipBlockPlace;
+    public AudioClip clipGameOver;
+
+    [Header("UI")]
+    public AudioClip clipClick;
 
     [Header("Audio Source")]
     [SerializeField] private AudioSource _asBGM; // 배경은 전용 (loop = true)
     [SerializeField] private AudioSource _asSFX; // 효과음 전용
+    [SerializeField] private AudioSource _asUI; // UI 전용
 
     private void Awake()
     {
