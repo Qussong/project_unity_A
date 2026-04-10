@@ -5,6 +5,10 @@ using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
+    [Header("시작화면 UI")]
+    public GameObject homePanel;
+    public Button btnStartGame;
+
     [Header("인게임 UI")]
     public TMP_Text textScore;
     public TMP_Text textBestScore;
@@ -21,10 +25,11 @@ public class UIManager : MonoBehaviour
     {
         // 저장된 최고 점수 불러오기
         _bestScore = PlayerPrefs.GetInt("BestScore", 0);
+        
         UpdateBestScoreUI();
 
-        // 재시작 버튼 이벤트 연결
-        btnRestart.onClick.AddListener(ReStartGame);
+        // 홈 화면 패널 표출
+        homePanel.SetActive(true);
 
         // 게임오버 패널 숨기기
         gameOverPanel.SetActive(false);

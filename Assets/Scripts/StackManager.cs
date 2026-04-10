@@ -1,11 +1,12 @@
+using DG.Tweening;
 using Unity.VisualScripting;
 using UnityEngine;
 
 public class StackManager : MonoBehaviour
 {
     [Header("Setting")]
-    public GameObject parentObj;        // 생성된 블록의 부모 오브젝트
-    public GameObject baseBlock;        // 첫번째 블록
+    public GameObject objBlockContainer;// 생성된 블록의 부모 오브젝트
+    public GameObject objBaseBlock;     // 첫번째 블록
 
     [Header("블록 설정")]
     public GameObject blockPrefab;
@@ -35,14 +36,35 @@ public class StackManager : MonoBehaviour
     // 카메라 위치 변경 플래그
     private bool _bMoveCamera = false;
 
+    // 게임 플레이 플래그
+    private bool _bPlayGame = false;
+
+    private Camera _mainCam = null;
+    private Vector3 _camInitPos = Vector3.zero;
+
+
     void Start()
     {
+        // 메인 카메라 캐싱
+        _mainCam = Camera.main;
+        // 카메라 위치 저장
+        _camInitPos = _mainCam.transform.localPosition;
+
+        // 게임 플레이 버튼 이벤트 연결
+        uiManager.btnStartGame.onClick.AddListener(StartGame);
+
+        // 재시작 버튼 이벤트 연결
+        uiManager.btnRestart.onClick.AddListener(ResetGame);
+
         SetupBaseBlock();   // 바닥 고정 블록 설정
-        SpawnNext();        // 첫 번째 움직이는 블록
+        // SpawnNext();     // 첫 번째 움직이는 블록
     }
 
     void Update()
     {
+        // 게임 플레이 상태 아니면 탭 인식 x
+        if (false == _bPlayGame) return;
+
         bool isMouseTouched = Input.GetMouseButtonDown(0);
         bool isMobileTouched = Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began;
         bool test = Input.GetKeyDown(KeyCode.Space);
@@ -64,11 +86,20 @@ public class StackManager : MonoBehaviour
         }
     }
 
+    private void StartGame()
+    {
+        // 홈 화면 패널 숨기기
+        uiManager.homePanel.SetActive(false);
+
+        _bPlayGame = true;  // 게임 플레이 플래그 on
+        SpawnNext();        // 첫 번째 움직이는 블록
+    }
+
     // 바닥 블록 (움직이지 않는 기준 블록) 생성
     void SetupBaseBlock()
     {
-        _lastBlock = baseBlock.AddComponent<Block>();
-        baseBlock.GetComponent<Renderer>().material.color = Color.white;
+        _lastBlock = objBaseBlock.AddComponent<Block>();
+        objBaseBlock.GetComponent<Renderer>().material.color = Color.white;
         _currentY = blockHeight / 2f;  // 다음 블록 Y 위치
     }
 
@@ -94,7 +125,7 @@ public class StackManager : MonoBehaviour
                                     blockHeight,
                                     _lastBlock.Length);
 
-        GameObject go = Instantiate(blockPrefab, startPos, Quaternion.identity, parentObj.transform);
+        GameObject go = Instantiate(blockPrefab, startPos, Quaternion.identity, objBlockContainer.transform);
         _currentBlock = go.GetComponent<Block>();
         _currentBlock.Init(startPos, scale, _blockColor);
 
@@ -200,19 +231,22 @@ public class StackManager : MonoBehaviour
     void PerfectEffect()
     {
         Debug.Log("Perfect");
-        //
     }
 
     // 카메라를 블록 높이에 맞춰 올림
     void MoveCamera()
     {
-        Camera.main.transform.position += new Vector3(0, blockHeight, 0);
+        Vector3 target = _mainCam.transform.position + new Vector3(0, blockHeight, 0);
+        _mainCam.transform.DOMove(target, 0.3f).SetEase(Ease.OutCubic);
     }
 
     // 게임오버
     void GameOver()
     {
         Debug.Log("Game Over!");
+
+        // 게임 플레이 플래그 off
+        _bPlayGame = false;
 
         // 현재 블록 이동 정지
         _currentBlock.GetComponent<BlockMover>().Stop();
@@ -224,10 +258,36 @@ public class StackManager : MonoBehaviour
 
     private void PlayStackEffect(Vector3 position)
     {
-        ParticleSystem effect = Instantiate(_stackEffectPrefab, position, Quaternion.Euler(90, 0, 0), parentObj.transform);
+        ParticleSystem effect = Instantiate(_stackEffectPrefab, position, Quaternion.Euler(90, 0, 0), objBlockContainer.transform);
         effect.Play();
 
         Destroy(effect.gameObject, 1.5f);
+    }
+
+    private void ResetGame()
+    {
+        // 게임오버 패널 숨기기
+        uiManager.gameOverPanel.SetActive(false);
+
+        // 홈 화면 패널 표출
+        uiManager.homePanel.SetActive(true);
+
+        // 쌓아둔 블록 전부 제거
+        foreach (Transform block in objBlockContainer.transform)
+            Destroy(block.gameObject);
+
+        // 상태 값 초기화
+        _score = 0;
+        _onX = true;
+        _currentY = 0f;
+        _currentBlock = null;
+        _blockColor = Color.cyan;
+
+        // 카메라 위치 리셋
+        _mainCam.transform.localPosition = _camInitPos;
+
+        // baseBlock 재설정
+        SetupBaseBlock();
     }
 
 }
