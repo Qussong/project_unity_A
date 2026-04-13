@@ -1,8 +1,9 @@
+using System;
 using UnityEngine;
 
-public class AudioManager : MonoBehaviour
+public class SoundManager : MonoBehaviour
 {
-    public static AudioManager Instance { get; private set; }
+    public static SoundManager Instance { get; private set; }
 
     [Header("BGM")]
     public AudioClip clipMainBGM;
@@ -19,6 +20,8 @@ public class AudioManager : MonoBehaviour
     [SerializeField] private AudioSource _asSFX; // 효과음 전용
     [SerializeField] private AudioSource _asUI; // UI 전용
 
+    public event Action<bool> OnMuteChanged;
+
     private void Awake()
     {
         Instance = this;
@@ -26,13 +29,26 @@ public class AudioManager : MonoBehaviour
 
     void Start()
     {
-        // BGM 재생
         if (clipMainBGM != null)
-        {
-            _asBGM.clip = clipMainBGM;
-            _asBGM.loop = true;
-            _asBGM.Play();
-        }
+            PlayBGM(clipMainBGM);
+    }
+
+    public bool IsMuted { get; private set; } = false;
+
+    public void ToggleMute()
+    {
+        IsMuted = !IsMuted;
+
+        _asBGM.mute = IsMuted;
+        _asSFX.mute = IsMuted;
+        OnMuteChanged.Invoke(IsMuted);
+    }
+
+    public void PlayBGM(AudioClip clip)
+    {
+        _asBGM.clip = clip;
+        _asBGM.loop = true;
+        _asBGM.Play();
     }
 
     public void PlaySFX(AudioClip clip)

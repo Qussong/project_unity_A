@@ -1,6 +1,16 @@
 using DG.Tweening;
+using PixelBattleText;
+using Unity.Mathematics;
 using Unity.VisualScripting;
 using UnityEngine;
+
+public enum EPlaceState
+{
+    GOOD,
+    BAD,
+    PERFECT,
+    NONE
+}
 
 public class StackManager : MonoBehaviour
 {
@@ -10,25 +20,37 @@ public class StackManager : MonoBehaviour
 
     [Header("블록 설정")]
     public GameObject blockPrefab;
-    public float blockWidth = 2f;       // 블록 너비 (x)
-    public float blockLength = 2f;      // 블록 길이 (z)
-    public float blockHeight = 1f;      // 블록 두께 (y)
-    public float minMoveSpeed = 3f;     // 시작 속도
-    public float maxMoveSpeed = 10f;    // 최대 속도
-    public float blockPosDistance = 3f;
+    // public float blockWidth = 1f;       // 블록 너비 (x)
+    // public float blockLength = 1f;      // 블록 길이 (z)
+    public float blockHeight = 0.2f;    // 블록 두께 (y)
+    public float minMoveSpeed = 2f;     // 시작 속도
+    public float maxMoveSpeed = 5f;     // 최대 속도
+    public float blockPosDistance = 2f;
 
     [Header("UI")]
     public UIManager uiManager;
 
     [Header("Effect")]
-    [SerializeField] private ParticleSystem _stackEffectPrefab;
+    public ParticleSystem stackEffectPrefab;
+    public Vector3 stackEffetstartSize = new Vector3(1f,1f,1f);
+
+    [Header("PixelBattleText")]
+    public TextAnimation taGood;
+    public TextAnimation taBad;
+    public TextAnimation taPerfect;
+    public string strGood;
+    public string strBad;
+    public string strPerfect;
+    private EPlaceState _placeState = EPlaceState.NONE;
 
     // 내부 상태
     private Block _lastBlock;       // 직전에 놓인 블록
     private Block _currentBlock;    // 지금 움직이는 블록
     private int _score = 0;
-    private bool _onX = true;  // 이동 축 (층마다 교대)
+    private bool _onX = true;       // 이동 축 (층마다 교대)
     private float _currentY = 0f;   // 다음 블록 Y 위치
+    private float _initBlockWidth;  // 초기 블록 너비 (x)
+    private float _initBlockLength; // 초기 블록 길이 (z)
 
     // 블록 색상 — 층마다 점진적으로 변함
     private Color _blockColor = Color.cyan;
@@ -50,6 +72,10 @@ public class StackManager : MonoBehaviour
         // 카메라 위치 저장
         _camInitPos = _mainCam.transform.localPosition;
 
+        // 초기 블록 크기 저장
+        _initBlockWidth = objBaseBlock.transform.localScale.x;
+        _initBlockLength = objBaseBlock.transform.localScale.z;
+
         // 게임 플레이 버튼 이벤트 연결
         uiManager.btnStartGame.onClick.AddListener(StartGame);
 
@@ -65,8 +91,8 @@ public class StackManager : MonoBehaviour
         // 게임 플레이 상태 아니면 탭 인식 x
         if (false == _bPlayGame) return;
 
-        bool isMouseTouched = Input.GetMouseButtonDown(0);
-        bool isMobileTouched = Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began;
+        bool isMouseTouched = Input.GetMouseButtonDown(0) && !UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject();
+        bool isMobileTouched = Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began && !UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(Input.GetTouch(0).fingerId);
         bool test = Input.GetKeyDown(KeyCode.Space);
         bool bTapped = isMouseTouched || isMobileTouched || test;
 
@@ -89,7 +115,7 @@ public class StackManager : MonoBehaviour
     private void StartGame()
     {
         // 홈 화면 패널 숨기기
-        uiManager.homePanel.SetActive(false);
+        uiManager.panelHome.SetActive(false);
 
         _bPlayGame = true;  // 게임 플레이 플래그 on
         SpawnNext();        // 첫 번째 움직이는 블록
@@ -158,9 +184,10 @@ public class StackManager : MonoBehaviour
             GameOver();
             return;
         }
-
-        // 5-1. 완벽히 맞춘 경우 (5% 미만의 오차는 퍼펙트 처리)
-        if (Mathf.Abs(offset) / blockSize < 0.05f)
+        
+        float offectPercent = Mathf.Abs(offset) / blockSize;
+        // 5-1. 완벽히 맞춘 경우 (10% 미만의 오차는 퍼펙트 처리)
+        if (offectPercent < 0.1f)
         {
             // 크기 유지
             overlap = blockSize;
@@ -179,6 +206,9 @@ public class StackManager : MonoBehaviour
 
             // 이펙트
             PerfectEffect();
+
+            // 매칭 상태
+            _placeState = EPlaceState.PERFECT;
         }
         // 5-2. 완벽히 맞추지 못하면
         else
@@ -200,19 +230,25 @@ public class StackManager : MonoBehaviour
 
             // 조각 블록 생성
             _currentBlock.SpawnDebris(debrisSize, lastCenter, newCenter, _onX);
+
+            // 매칭 상태
+            _placeState = offectPercent < 0.3f ? EPlaceState.GOOD : EPlaceState.BAD;
         }
 
         // 효과음 재생
-        AudioManager.Instance.PlaySFX(AudioManager.Instance.clipBlockPlace);
+        SoundManager.Instance.PlaySFX(SoundManager.Instance.clipBlockPlace);
         // 이펙트 
-        PlayStackEffect(_currentBlock.transform.localPosition);
+        // PlayStackEffect(_currentBlock.transform.localPosition);
         // 떡 효과
         _currentBlock.PlayBounceEffect();
+        // BattleTextAnimation 출력
+        DisplayPixelBattelText(_placeState);
+        _placeState = EPlaceState.NONE;
 
         // 점수 갱신
         _score++;
         // UpdateScore();
-        uiManager.AddScore();
+        uiManager.SetScore(_score);
 
         // 다음 블록 준비
         _lastBlock = _currentBlock;
@@ -253,12 +289,23 @@ public class StackManager : MonoBehaviour
         _currentBlock = null;
 
         // 게임 종료 패널 표시
-        uiManager.ShowGameOver();
+        uiManager.ShowGameOver(_score);
     }
 
     private void PlayStackEffect(Vector3 position)
     {
-        ParticleSystem effect = Instantiate(_stackEffectPrefab, position, Quaternion.Euler(90, 0, 0), objBlockContainer.transform);
+        var main = stackEffectPrefab.main;
+        main.startSizeX = new ParticleSystem.MinMaxCurve(Mathf.Max(0.1f, 0.5f * _currentBlock.Width / _initBlockWidth));
+        main.startSizeY = new ParticleSystem.MinMaxCurve(Mathf.Max(0.1f, 0.5f * _currentBlock.Length / _initBlockLength));
+        main.startSizeZ = new ParticleSystem.MinMaxCurve(0.5f);
+
+        float ratio = (_currentBlock.Width + _currentBlock.Length) / 2f / _initBlockWidth;
+        main.startSpeed = new ParticleSystem.MinMaxCurve(Mathf.Max(0.1f, 0.5f * ratio));
+
+        var shape = stackEffectPrefab.shape;
+        shape.radius = 0.5f * (_currentBlock.Width + _currentBlock.Length) / 2f / _initBlockWidth;
+
+        ParticleSystem effect = Instantiate(stackEffectPrefab, position, Quaternion.Euler(90, 0, 0), objBlockContainer.transform);
         effect.Play();
 
         Destroy(effect.gameObject, 1.5f);
@@ -267,10 +314,10 @@ public class StackManager : MonoBehaviour
     private void ResetGame()
     {
         // 게임오버 패널 숨기기
-        uiManager.gameOverPanel.SetActive(false);
+        uiManager.panelGameOver.SetActive(false);
 
         // 홈 화면 패널 표출
-        uiManager.homePanel.SetActive(true);
+        uiManager.panelHome.SetActive(true);
 
         // 쌓아둔 블록 전부 제거
         foreach (Transform block in objBlockContainer.transform)
@@ -278,6 +325,7 @@ public class StackManager : MonoBehaviour
 
         // 상태 값 초기화
         _score = 0;
+        uiManager.SetScore(_score);
         _onX = true;
         _currentY = 0f;
         _currentBlock = null;
@@ -288,6 +336,29 @@ public class StackManager : MonoBehaviour
 
         // baseBlock 재설정
         SetupBaseBlock();
+    }
+
+    private void DisplayPixelBattelText(EPlaceState state)
+    {
+        Vector2 viewportPosition = Camera.main.WorldToViewportPoint(_currentBlock.transform.localPosition + new Vector3(0f,0.5f,0f));
+        viewportPosition.x = 0.5f;
+
+        if(state == EPlaceState.GOOD)
+        {
+            PixelBattleTextController.DisplayText(strGood, taGood, viewportPosition);
+        }
+        else if(state == EPlaceState.BAD)
+        {
+            PixelBattleTextController.DisplayText(strBad, taBad, viewportPosition);
+        }
+        else if(state == EPlaceState.PERFECT)
+        {
+            PixelBattleTextController.DisplayText(strPerfect, taPerfect, viewportPosition);
+        }
+        else
+        {
+            //
+        }
     }
 
 }
