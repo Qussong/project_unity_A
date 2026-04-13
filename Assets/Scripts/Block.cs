@@ -16,7 +16,8 @@ public class Block : MonoBehaviour
     {
         transform.position = pos;
         transform.localScale = scale;
-        GetComponent<Renderer>().material.color = color;
+        // GetComponent<Renderer>().material.color = color;
+        GetComponent<Renderer>().material.SetColor("_BaseColor", color);
     }
 
     // 잘라내기 - 겹침 영역만 남기고 초과 조각을 떨어뜨림
@@ -71,7 +72,8 @@ public class Block : MonoBehaviour
         debris.transform.position = debrisPos;
 
         // 색상
-        debris.GetComponent<Renderer>().material.color = GetComponent<Renderer>().material.color;
+        // debris.GetComponent<Renderer>().material.color = GetComponent<Renderer>().material.color;
+        debris.GetComponent<Renderer>().material.SetColor("_BaseColor", GetComponent<Renderer>().material.GetColor("_BaseColor"));
 
         // 중력으로 떨어짐
         Rigidbody rb = debris.AddComponent<Rigidbody>();
@@ -101,8 +103,8 @@ public class Block : MonoBehaviour
         float origPosY   = transform.localPosition.y;
 
         // (목표 상대 스케일, 지속 시간) 키프레임
-        float[] scales    = { 0.78f, 1.06f, 0.98f, 1.00f };
-        float[] durations = { 0.08f, 0.13f, 0.07f, 0.05f };
+        float[] scales    = { 0.60f, 1.15f, 0.92f, 1.05f, 0.99f, 1.00f };
+        float[] durations = { 0.08f, 0.14f, 0.10f, 0.08f, 0.05f, 0.03f };
 
         float prev = 1.0f;
         for (int i = 0; i < scales.Length; i++)

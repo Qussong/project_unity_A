@@ -32,7 +32,6 @@ public class StackManager : MonoBehaviour
 
     [Header("Effect")]
     public ParticleSystem stackEffectPrefab;
-    public Vector3 stackEffetstartSize = new Vector3(1f,1f,1f);
 
     [Header("PixelBattleText")]
     public TextAnimation taGood;
@@ -240,8 +239,7 @@ public class StackManager : MonoBehaviour
 
         // 효과음 재생
         SoundManager.Instance.PlaySFX(SoundManager.Instance.clipBlockPlace);
-        // 이펙트 
-        // PlayStackEffect(_currentBlock.transform.localPosition);
+
         // 떡 효과
         _currentBlock.PlayBounceEffect();
         // BattleTextAnimation 출력
@@ -270,6 +268,8 @@ public class StackManager : MonoBehaviour
     void PerfectEffect()
     {
         Debug.Log("Perfect");
+        // 이펙트 
+        PlayStackEffect(_currentBlock.transform.localPosition);
     }
 
     // 카메라를 블록 높이에 맞춰 올림
@@ -301,17 +301,23 @@ public class StackManager : MonoBehaviour
     private void PlayStackEffect(Vector3 position)
     {
         var main = stackEffectPrefab.main;
-        main.startSizeX = new ParticleSystem.MinMaxCurve(Mathf.Max(0.1f, 0.5f * _currentBlock.Width / _initBlockWidth));
-        main.startSizeY = new ParticleSystem.MinMaxCurve(Mathf.Max(0.1f, 0.5f * _currentBlock.Length / _initBlockLength));
-        main.startSizeZ = new ParticleSystem.MinMaxCurve(0.5f);
-
-        float ratio = (_currentBlock.Width + _currentBlock.Length) / 2f / _initBlockWidth;
-        main.startSpeed = new ParticleSystem.MinMaxCurve(Mathf.Max(0.1f, 0.5f * ratio));
+        main.duration = 0.2f;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(0.2f, 0.5f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(0.5f, 1f);
+        main.startSize = new ParticleSystem.MinMaxCurve(0.5f, 1f);
+        main.startRotation = new ParticleSystem.MinMaxCurve(-180f * Mathf.Deg2Rad, 180f * Mathf.Deg2Rad);
+        main.playOnAwake = false;
 
         var shape = stackEffectPrefab.shape;
-        shape.radius = 0.5f * (_currentBlock.Width + _currentBlock.Length) / 2f / _initBlockWidth;
+        shape.radius = 0.5f;
 
-        ParticleSystem effect = Instantiate(stackEffectPrefab, position, Quaternion.Euler(90, 0, 0), objBlockContainer.transform);
+        var emission = stackEffectPrefab.emission;
+        emission.SetBursts(new ParticleSystem.Burst[]
+        {
+            new ParticleSystem.Burst(0f, 6)
+        });
+
+        ParticleSystem effect = Instantiate(stackEffectPrefab, position, Quaternion.Euler(0, 0, 0), objBlockContainer.transform);
         effect.Play();
 
         Destroy(effect.gameObject, 1.5f);

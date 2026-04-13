@@ -10,7 +10,7 @@
 | 플랫폼 | PC · Mobile |
 | 엔진 | Unity 6 (URP) |
 | 언어 | C# |
-| 버전 | 0.6.0 |
+| 버전 | 0.7.0 |
 
 ---
 
@@ -55,12 +55,13 @@
 | 겹침 없음 게임오버 | 탭 시 이전 블록과 겹치는 영역이 없으면 게임오버 |
 | 누적 스택 | 잔류 블록 위에 다음 블록 생성, 카메라 자동 상승 (DOTween `OutCubic` 보간) |
 | 색상 변화 | HSV 색상환을 따라 층마다 파스텔톤으로 블록 색상 점진 변화 (S=0.35, V=0.98) |
-| 블록 탄성 | 블록 배치 시 Y 스케일 squish→spring 코루틴으로 떡 눌리는 탄성 표현 |
+| 블록 탄성 | 블록 배치 시 Y 스케일 squish→spring 코루틴으로 떡 눌리는 탄성 표현 (squish 40%, spring 15%, 6단계 진동) |
 | Debris 탄성 | 잘린 조각에 PhysicsMaterial 적용, 바닥 충돌 시 통통 튕김 |
 | 점수 UI | 현재 점수·최고 점수 실시간 표시 (TextMeshPro), 최고점수 갱신 시 자동 저장 |
 | BGM·효과음 | BGM 루프 재생, 블록 배치 효과음 재생 (`SoundManager` 싱글턴, 3채널) |
 | 음소거 토글 | 인게임 버튼으로 BGM·SFX 동시 뮤트, 버튼 스프라이트 ON/OFF 전환 |
 | BGM 볼륨 페이드 | 화면 전환 시 BGM 볼륨을 DOTween으로 부드럽게 전환 (홈·게임오버 0.5, 게임 중 0.15) |
+| 블록 메시 | Blender에서 제작한 Rounded Cube 메시 적용, URP `_BaseColor` 프로퍼티로 색상 설정 |
 
 ---
 
@@ -139,6 +140,9 @@ ProjectA/
 
 | 날짜 | 내용 |
 |---|---|
+| 2026-04-14 | 블록 메시를 Blender Rounded Cube로 교체, URP `_BaseColor`로 색상 설정 방식 변경 |
+| 2026-04-14 | 블록 탄성 강화 (squish 22%→40%, spring 6%→15%, 4단계→6단계 진동) |
+| 2026-04-14 | 파티클 이펙트 파라미터 설정 (Duration 0.2, Lifetime 0.2~0.5, Size 0.5~1.5 등) |
 | 2026-04-13 | BGM 및 블록 배치 효과음 클립 교체 |
 | 2026-04-13 | BGM 볼륨 페이드 추가 (`SoundManager.FadeBGMVolume`, DOTween `DOFade` + `DOKill` 중복 방지) |
 | 2026-04-13 | 음소거 토글 구현 (`SoundManager.ToggleMute`, `OnMuteChanged` 이벤트, 버튼 스프라이트 전환) |

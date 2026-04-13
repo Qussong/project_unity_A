@@ -62,7 +62,7 @@ public class SoundManager : MonoBehaviour
     public void PlaySFX(AudioClip clip)
     {
         _asSFX.PlayOneShot(clip);
-        _asSFX.volume = 0.5f;
+        _asSFX.volume = 0.3f;
     }
 
     
