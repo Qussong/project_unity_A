@@ -117,6 +117,9 @@ public class StackManager : MonoBehaviour
         // 홈 화면 패널 숨기기
         uiManager.panelHome.SetActive(false);
 
+        // 배경음 줄이기
+        SoundManager.Instance.FadeBGMVolume(0.15f, 1f);
+
         _bPlayGame = true;  // 게임 플레이 플래그 on
         SpawnNext();        // 첫 번째 움직이는 블록
     }
@@ -290,6 +293,9 @@ public class StackManager : MonoBehaviour
 
         // 게임 종료 패널 표시
         uiManager.ShowGameOver(_score);
+
+        // 배경음 높이기
+        SoundManager.Instance.FadeBGMVolume(0.5f, 0.5f);
     }
 
     private void PlayStackEffect(Vector3 position)

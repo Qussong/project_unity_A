@@ -1,4 +1,5 @@
 using System;
+using DG.Tweening;
 using UnityEngine;
 
 public class SoundManager : MonoBehaviour
@@ -44,16 +45,26 @@ public class SoundManager : MonoBehaviour
         OnMuteChanged.Invoke(IsMuted);
     }
 
+    public void FadeBGMVolume(float target, float duration)
+    {
+        _asBGM.DOKill();
+        _asBGM.DOFade(target, duration);
+    }
+
     public void PlayBGM(AudioClip clip)
     {
         _asBGM.clip = clip;
         _asBGM.loop = true;
+        _asBGM.volume = 0.5f;
         _asBGM.Play();
     }
 
     public void PlaySFX(AudioClip clip)
     {
         _asSFX.PlayOneShot(clip);
+        _asSFX.volume = 0.5f;
     }
+
+    
 
 }

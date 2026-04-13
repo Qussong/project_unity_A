@@ -60,6 +60,7 @@
 | 점수 UI | 현재 점수·최고 점수 실시간 표시 (TextMeshPro), 최고점수 갱신 시 자동 저장 |
 | BGM·효과음 | BGM 루프 재생, 블록 배치 효과음 재생 (`SoundManager` 싱글턴, 3채널) |
 | 음소거 토글 | 인게임 버튼으로 BGM·SFX 동시 뮤트, 버튼 스프라이트 ON/OFF 전환 |
+| BGM 볼륨 페이드 | 화면 전환 시 BGM 볼륨을 DOTween으로 부드럽게 전환 (홈·게임오버 0.5, 게임 중 0.15) |
 
 ---
 
@@ -125,6 +126,11 @@ ProjectA/
     └─▶ SoundManager.ToggleMute()
             ├─▶ _asBGM.mute / _asSFX.mute 전환
             └─▶ OnMuteChanged(isMuted) → UIManager.UpdateSoundButtonSprite()
+
+화면 전환 (StartGame / GameOver)
+    └─▶ SoundManager.FadeBGMVolume(target, duration)
+            ├─▶ _asBGM.DOKill()          — 진행 중인 페이드 중단
+            └─▶ _asBGM.DOFade(target, duration) — 목표 볼륨으로 부드럽게 전환
 ```
 
 ---
@@ -133,6 +139,8 @@ ProjectA/
 
 | 날짜 | 내용 |
 |---|---|
+| 2026-04-13 | BGM 및 블록 배치 효과음 클립 교체 |
+| 2026-04-13 | BGM 볼륨 페이드 추가 (`SoundManager.FadeBGMVolume`, DOTween `DOFade` + `DOKill` 중복 방지) |
 | 2026-04-13 | 음소거 토글 구현 (`SoundManager.ToggleMute`, `OnMuteChanged` 이벤트, 버튼 스프라이트 전환) |
 | 2026-04-13 | UI 버튼 클릭 시 블록 배치 차단 (`EventSystem.IsPointerOverGameObject`) |
 | 2026-04-13 | AudioManager → SoundManager 리네임, `PlayBGM()` 함수 분리 |
