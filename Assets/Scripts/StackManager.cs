@@ -1,3 +1,4 @@
+using System;
 using DG.Tweening;
 using PixelBattleText;
 using UnityEngine;
@@ -405,9 +406,13 @@ public class StackManager : MonoBehaviour
         // 게임 플레이 플래그 off
         _bPlayGame = false;
 
+        // 카메라 이동
+        ShowFullStack();
+
         // 현재 블록 이동 정지
         _currentBlock.GetComponent<BlockMover>().Stop();
         _currentBlock = null;
+
 
         // 콤보 값 초기화
         _comboCnt = 0;
@@ -418,6 +423,44 @@ public class StackManager : MonoBehaviour
 
         // 배경음 높이기
         SoundManager.Instance.FadeBGMVolume(0.5f, 0.5f);
+    }
+
+    private void ShowFullStack()
+    {
+        // 스택의 월드 Y 범위: 바닥(0) ~ 최상단 블록 top
+        float stackBottomY = -1f;
+        float stackTopY = _currentBlock.transform.position.y + _currentBlock.transform.localScale.y / 2f;
+
+        // 바닥·꼭대기 점을 뷰포트 좌표(0~1)로 변환
+        Vector3 bottomVP = _mainCam.WorldToViewportPoint(new Vector3(0f, stackBottomY, 0f));
+        Vector3 topVP    = _mainCam.WorldToViewportPoint(new Vector3(0f, stackTopY,    0f));
+
+        // 현재 뷰포트에서 스택이 차지하는 Y 비율
+        float currentSpan = topVP.y - bottomVP.y;
+        // 목표 비율: 화면 높이의 75%를 스택이 채우도록
+        float desiredSpan = 0.75f;
+
+        // orthographicSize를 비례 축소하면 동일한 월드 범위가 더 큰 뷰포트 비율을 차지함
+        // targetSize = currentSize × (currentSpan / desiredSpan)
+        // ex) currentSpan=0.3, desiredSpan=0.75 → targetSize = currentSize × 0.4 (줌인)
+        float targetSize = _mainCam.orthographicSize * (currentSpan / desiredSpan);
+
+        // 스택의 월드 중심점
+        Vector3 stackMid = new Vector3(0f, (stackBottomY + stackTopY) / 2f, 0f);
+
+        // stackMid 까지의 카메라 전방(forward) 거리 — ViewportToWorldPoint의 z 입력값으로 사용
+        float depth = _mainCam.WorldToViewportPoint(stackMid).z;
+
+        // 현재 화면 정중앙(0.5, 0.5)에 해당하는 월드 좌표 역산
+        // → 카메라 각도와 무관하게 동작 (투영 역변환)
+        Vector3 currentViewCenter = _mainCam.ViewportToWorldPoint(new Vector3(0.5f, 0.5f, depth));
+
+        // 화면 중심을 stackMid로 옮기는 데 필요한 카메라 이동량
+        Vector3 targetCamPos = _mainCam.transform.position + (stackMid - currentViewCenter);
+
+        // 카메라 위치·크기 동시 애니메이션
+        _mainCam.transform.DOMove(targetCamPos, 1f).SetEase(Ease.OutCubic);
+        _mainCam.DOOrthoSize(targetSize, 1f).SetEase(Ease.OutCubic);
     }
 
     private void ResetGame()
@@ -442,6 +485,7 @@ public class StackManager : MonoBehaviour
 
         // 카메라 위치 리셋
         _mainCam.transform.localPosition = _camInitPos;
+        _mainCam.DOOrthoSize(2f, 1f).SetEase(Ease.OutCubic);
 
         // baseBlock 재설정
         SetupBaseBlock();
@@ -469,5 +513,7 @@ public class StackManager : MonoBehaviour
             //
         }
     }
+
+
 
 }

@@ -58,6 +58,7 @@
 | 블록 탄성 | 블록 배치 시 Y 스케일 squish→spring 코루틴으로 떡 눌리는 탄성 표현 (squish 40%, spring 15%, 6단계 진동) |
 | 퍼펙트 콤보 보상 | 퍼펙트 판정 3연속 시 현재 블록을 이동 축 방향으로 1.3배 확장, `DOScaleX`/`DOScaleZ` `OutElastic` 0.4초 애니메이션으로 늘어나듯 표현 |
 | 카메라 자동 줌아웃 | 배치 시 블록 4 코너를 `WorldToViewportPoint`로 검사, 화면 밖이면 `DOOrthoSize`로 Orthographic Size +1 (OutCubic 1초) |
+| 게임오버 전체 스택 뷰 | 게임오버 시 스택 전체가 화면에 들어오도록 카메라 위치·Orthographic Size를 DOTween으로 자동 조정 (`ShowFullStack`) |
 | Debris 탄성 | 잘린 조각에 PhysicsMaterial 적용, 바닥 충돌 시 통통 튕김 |
 | 점수 UI | 현재 점수·최고 점수 실시간 표시 (TextMeshPro), 최고점수 갱신 시 자동 저장 |
 | BGM·효과음 | BGM 루프 재생, 블록 배치 효과음 재생 (`SoundManager` 싱글턴, 3채널) |
@@ -79,7 +80,7 @@
 | 유틸리티 | 블록 색상 설정 | `ColorModifier` |
 | UI 매니저 | 점수·최고점수 표시, 홈·게임오버 패널 제어, 음소거 버튼 스프라이트 갱신 | `UIManager` |
 | 오디오 매니저 | BGM·SFX 재생, 뮤트 토글, `OnMuteChanged` 이벤트 발행, 싱글턴 | `SoundManager` |
-| 카메라 제어 | 블록 높이 추적 상승, 슬라이싱 중심 X/Z 보정, 블록 이탈 시 자동 줌아웃 | `StackManager.MoveCamera` · `FitCameraProjectionSizeToBlock` |
+| 카메라 제어 | 블록 높이 추적 상승, 슬라이싱 중심 X/Z 보정, 블록 이탈 시 자동 줌아웃, 게임오버 시 전체 스택 뷰 | `StackManager.MoveCamera` · `FitCameraProjectionSizeToBlock` · `ShowFullStack` |
 
 ---
 
@@ -118,6 +119,7 @@ ProjectA/
             ├─▶ BlockMover.Stop()          — 블록 정지
             ├─▶ 겹침(overlap) 계산
             │       ├─ overlap ≤ 0         → GameOver()
+            │       │                         ├─▶ ShowFullStack()     — 카메라 위치·Size 자동 조정
             │       │                         └─▶ UIManager.ShowGameOver(score)
             │       ├─ |offset|/blockSize < 0.1 → 퍼펙트 판정 (크기 유지 + 위치 보정, _comboCnt++)
             │       └─ 그 외              → Block.Slice() + Block.SpawnDebris() (_comboCnt 리셋)
@@ -143,6 +145,7 @@ ProjectA/
 
 | 날짜 | 내용 |
 |---|---|
+| 2026-04-14 | 게임오버 전체 스택 뷰 추가 (`ShowFullStack`): `WorldToViewportPoint`·`ViewportToWorldPoint` 역산으로 카메라 위치·Orthographic Size 자동 계산, DOTween OutCubic 1초 애니메이션 |
 | 2026-04-14 | 카메라 자동 줌아웃 추가 (`FitCameraProjectionSizeToBlock`): 블록 4 코너 뷰포트 검사, 이탈 시 `DOOrthoSize` +1 (OutCubic 1s) |
 | 2026-04-14 | `MoveCamera` 개선: 슬라이싱 중심 이동에 따른 X/Z 보정 추가, duration 0.3s→0.5s |
 | 2026-04-14 | `SparrowController` 제거 |
