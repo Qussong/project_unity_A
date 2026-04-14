@@ -1,3 +1,4 @@
+using System;
 using DG.Tweening;
 using PixelBattleText;
 using Unity.Mathematics;
@@ -20,8 +21,6 @@ public class StackManager : MonoBehaviour
 
     [Header("블록 설정")]
     public GameObject blockPrefab;
-    // public float blockWidth = 1f;       // 블록 너비 (x)
-    // public float blockLength = 1f;      // 블록 길이 (z)
     public float blockHeight = 0.2f;    // 블록 두께 (y)
     public float minMoveSpeed = 2f;     // 시작 속도
     public float maxMoveSpeed = 5f;     // 최대 속도
@@ -60,8 +59,15 @@ public class StackManager : MonoBehaviour
     // 게임 플레이 플래그
     private bool _bPlayGame = false;
 
+    // 메인 카메라 정보 캐싱
     private Camera _mainCam = null;
     private Vector3 _camInitPos = Vector3.zero;
+
+    // Perfect 콤보
+    private int _comboCnt = 0;
+    private bool _bPerfect = false;
+    private float nextBlockScaleX = 0f;
+    private float nextBlockScaleZ = 0f;
 
 
     void Start()
@@ -82,7 +88,12 @@ public class StackManager : MonoBehaviour
         uiManager.btnRestart.onClick.AddListener(ResetGame);
 
         SetupBaseBlock();   // 바닥 고정 블록 설정
-        // SpawnNext();     // 첫 번째 움직이는 블록
+
+        // 콤보 설정 초기화
+        _comboCnt = 0;
+        _bPerfect = false;
+
+        
     }
 
     void Update()
@@ -129,40 +140,10 @@ public class StackManager : MonoBehaviour
         _lastBlock = objBaseBlock.AddComponent<Block>();
         objBaseBlock.GetComponent<Renderer>().material.color = Color.white;
         _currentY = blockHeight / 2f;  // 다음 블록 Y 위치
-    }
 
-    // 다음 블록 생성
-    void SpawnNext()
-    {
-        // 블록 색상 점진 변화 (HSV 회전)
-        float h, s, v;
-        Color.RGBToHSV(_blockColor, out h, out s, out v);
-        // h = (h + 0.05f) % 1f;
-        // _blockColor = Color.HSVToRGB(h, 0.7f, 0.95f);
-        h = (h + 0.07f) % 1f;
-        _blockColor = Color.HSVToRGB(h, 0.35f, 0.98f);
-
-        // 시작 위치 — 이동 축 반대편 끝에서 시작
-        Vector3 startPos = new Vector3(
-            _onX ? -blockPosDistance : _lastBlock.PosX,   // X축 이동이면 왼쪽 끝
-            _currentY,
-            _onX ? _lastBlock.PosZ : -blockPosDistance    // Z축 이동이면 앞쪽 끝
-        );
-
-        Vector3 scale = new Vector3(_lastBlock.Width,
-                                    blockHeight,
-                                    _lastBlock.Length);
-
-        GameObject go = Instantiate(blockPrefab, startPos, Quaternion.identity, objBlockContainer.transform);
-        _currentBlock = go.GetComponent<Block>();
-        _currentBlock.Init(startPos, scale, _blockColor);
-
-        // 블록 이동 컴포넌트 세팅
-        BlockMover mover = go.AddComponent<BlockMover>();
-        // 점수 오를수록 빨라짐
-        mover.moveSpeed = Mathf.Min(minMoveSpeed + _score * 0.01f, maxMoveSpeed);
-        mover.moveOnX = _onX;
-        mover.moveRange = blockPosDistance;
+        // 디음 블록 스케일 캐싱
+        nextBlockScaleX = _lastBlock.Width;
+        nextBlockScaleZ = _lastBlock.Length;
     }
 
     // 탭 시: 겹침 계산 → 자르기 → 다음 블록 생성
@@ -186,35 +167,39 @@ public class StackManager : MonoBehaviour
             GameOver();
             return;
         }
-        
+
         float offectPercent = Mathf.Abs(offset) / blockSize;
         // 5-1. 완벽히 맞춘 경우 (10% 미만의 오차는 퍼펙트 처리)
         if (offectPercent < 0.1f)
         {
+            // 매칭 상태
+            _placeState = EPlaceState.PERFECT;
+
+            // 퍼펙트 여부 체크
+            _bPerfect = true;
+            _comboCnt += 1;
+
             // 크기 유지
             overlap = blockSize;
 
             // 위치 보정
             Vector3 pos = _currentBlock.transform.localPosition;
             if (_onX)
-            {
                 pos.x = _lastBlock.transform.localPosition.x;
-            }
             else
-            {
                 pos.z = _lastBlock.transform.localPosition.z;
-            }
             _currentBlock.transform.localPosition = pos;
 
             // 이펙트
             PerfectEffect();
-
-            // 매칭 상태
-            _placeState = EPlaceState.PERFECT;
         }
         // 5-2. 완벽히 맞추지 못하면
         else
         {
+            // 매칭 상태
+            _placeState = offectPercent < 0.3f ? EPlaceState.GOOD : EPlaceState.BAD;
+            _comboCnt = 0;
+
             float lastCenter = _onX
                 ? _lastBlock.PosX
                 : _lastBlock.PosZ;
@@ -232,9 +217,6 @@ public class StackManager : MonoBehaviour
 
             // 조각 블록 생성
             _currentBlock.SpawnDebris(debrisSize, lastCenter, newCenter, _onX);
-
-            // 매칭 상태
-            _placeState = offectPercent < 0.3f ? EPlaceState.GOOD : EPlaceState.BAD;
         }
 
         // 효과음 재생
@@ -242,14 +224,23 @@ public class StackManager : MonoBehaviour
 
         // 떡 효과
         _currentBlock.PlayBounceEffect();
-        // BattleTextAnimation 출력
-        DisplayPixelBattelText(_placeState);
+        DisplayPixelBattelText(_placeState);    // BattleTextAnimation 출력
         _placeState = EPlaceState.NONE;
 
         // 점수 갱신
         _score++;
-        // UpdateScore();
         uiManager.SetScore(_score);
+
+        // 다음 블록의 사이즈 캐싱
+        nextBlockScaleX = _currentBlock.Width;
+        nextBlockScaleZ = _currentBlock.Length;
+
+        // 콤보 보상
+        if(_comboCnt >= 3)
+        {
+            ApplyComboBonus();
+            _comboCnt = 0;
+        }
 
         // 다음 블록 준비
         _lastBlock = _currentBlock;
@@ -262,6 +253,25 @@ public class StackManager : MonoBehaviour
 
         // 다음 블록 생성
         SpawnNext();
+
+        // 퍼펙트 여부 초기화
+        _bPerfect = false;
+    }
+
+    private void ApplyComboBonus()
+    {
+        if(_onX)
+        {
+            float targetX = _currentBlock.Width * 1.3f;
+            nextBlockScaleX = targetX;  // 콤보 보상으로 커진 블록의 X 스케일 캐싱
+            _currentBlock.transform.DOScaleX(targetX, 0.4f).SetEase(Ease.OutElastic);
+        }
+        else
+        {
+            float targetZ = _currentBlock.Length * 1.3f;
+            nextBlockScaleZ = targetZ;  // 콤보 보상으로 커진 블록의 Z 스케일 캐싱
+            _currentBlock.transform.DOScaleZ(targetZ, 0.4f).SetEase(Ease.OutElastic);
+        }
     }
 
     // 퍼펙트 판정 시각 피드백
@@ -270,6 +280,63 @@ public class StackManager : MonoBehaviour
         Debug.Log("Perfect");
         // 이펙트 
         PlayStackEffect(_currentBlock.transform.localPosition);
+    }
+
+    private void PlayStackEffect(Vector3 position)
+    {
+        var main = stackEffectPrefab.main;
+        main.duration = 0.2f;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(0.2f, 0.5f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(0.5f, 1f);
+        main.startSize = new ParticleSystem.MinMaxCurve(0.5f, 1f);
+        main.startRotation = new ParticleSystem.MinMaxCurve(-180f * Mathf.Deg2Rad, 180f * Mathf.Deg2Rad);
+        main.playOnAwake = false;
+
+        var shape = stackEffectPrefab.shape;
+        shape.radius = 0.5f;
+
+        var emission = stackEffectPrefab.emission;
+        emission.SetBursts(new ParticleSystem.Burst[]
+        {
+            new ParticleSystem.Burst(0f, _comboCnt * 2f)
+        });
+
+        ParticleSystem effect = Instantiate(stackEffectPrefab, position, Quaternion.Euler(0, 0, 0), objBlockContainer.transform);
+        effect.Play();
+
+        Destroy(effect.gameObject, 1.5f);
+    }
+
+    // 다음 블록 생성
+    void SpawnNext()
+    {
+        // 블록 색상 점진 변화 (HSV 회전)
+        float h, s, v;
+        Color.RGBToHSV(_blockColor, out h, out s, out v);
+        h = (h + 0.07f) % 1f;
+        _blockColor = Color.HSVToRGB(h, 0.35f, 0.98f);
+
+        // 시작 위치 — 이동 축 반대편 끝에서 시작
+        Vector3 startPos = new Vector3(
+            _onX ? -blockPosDistance : _lastBlock.PosX,   // X축 이동이면 왼쪽 끝
+            _currentY,
+            _onX ? _lastBlock.PosZ : -blockPosDistance    // Z축 이동이면 앞쪽 끝
+        );
+
+        Vector3 scale = new Vector3(nextBlockScaleX,
+                                    blockHeight,
+                                    nextBlockScaleZ);
+
+        GameObject go = Instantiate(blockPrefab, startPos, Quaternion.identity, objBlockContainer.transform);
+        _currentBlock = go.GetComponent<Block>();
+        _currentBlock.Init(startPos, scale, _blockColor);
+
+        // 블록 이동 컴포넌트 세팅
+        BlockMover mover = go.AddComponent<BlockMover>();
+        // 점수 오를수록 빨라짐
+        mover.moveSpeed = Mathf.Min(minMoveSpeed + _score * 0.01f, maxMoveSpeed);
+        mover.moveOnX = _onX;
+        mover.moveRange = blockPosDistance;
     }
 
     // 카메라를 블록 높이에 맞춰 올림
@@ -291,36 +358,15 @@ public class StackManager : MonoBehaviour
         _currentBlock.GetComponent<BlockMover>().Stop();
         _currentBlock = null;
 
+        // 콤보 값 초기화
+        _comboCnt = 0;
+        _bPerfect = false;
+
         // 게임 종료 패널 표시
         uiManager.ShowGameOver(_score);
 
         // 배경음 높이기
         SoundManager.Instance.FadeBGMVolume(0.5f, 0.5f);
-    }
-
-    private void PlayStackEffect(Vector3 position)
-    {
-        var main = stackEffectPrefab.main;
-        main.duration = 0.2f;
-        main.startLifetime = new ParticleSystem.MinMaxCurve(0.2f, 0.5f);
-        main.startSpeed = new ParticleSystem.MinMaxCurve(0.5f, 1f);
-        main.startSize = new ParticleSystem.MinMaxCurve(0.5f, 1f);
-        main.startRotation = new ParticleSystem.MinMaxCurve(-180f * Mathf.Deg2Rad, 180f * Mathf.Deg2Rad);
-        main.playOnAwake = false;
-
-        var shape = stackEffectPrefab.shape;
-        shape.radius = 0.5f;
-
-        var emission = stackEffectPrefab.emission;
-        emission.SetBursts(new ParticleSystem.Burst[]
-        {
-            new ParticleSystem.Burst(0f, 6)
-        });
-
-        ParticleSystem effect = Instantiate(stackEffectPrefab, position, Quaternion.Euler(0, 0, 0), objBlockContainer.transform);
-        effect.Play();
-
-        Destroy(effect.gameObject, 1.5f);
     }
 
     private void ResetGame()
@@ -352,18 +398,18 @@ public class StackManager : MonoBehaviour
 
     private void DisplayPixelBattelText(EPlaceState state)
     {
-        Vector2 viewportPosition = Camera.main.WorldToViewportPoint(_currentBlock.transform.localPosition + new Vector3(0f,0.5f,0f));
+        Vector2 viewportPosition = Camera.main.WorldToViewportPoint(_currentBlock.transform.localPosition + new Vector3(0f, 0.5f, 0f));
         viewportPosition.x = 0.5f;
 
-        if(state == EPlaceState.GOOD)
+        if (state == EPlaceState.GOOD)
         {
             PixelBattleTextController.DisplayText(strGood, taGood, viewportPosition);
         }
-        else if(state == EPlaceState.BAD)
+        else if (state == EPlaceState.BAD)
         {
             PixelBattleTextController.DisplayText(strBad, taBad, viewportPosition);
         }
-        else if(state == EPlaceState.PERFECT)
+        else if (state == EPlaceState.PERFECT)
         {
             PixelBattleTextController.DisplayText(strPerfect, taPerfect, viewportPosition);
         }

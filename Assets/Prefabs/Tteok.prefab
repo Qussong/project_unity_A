@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 1472384211178035603}
   - component: {fileID: 5615217499291791167}
   m_Layer: 0
-  m_Name: Cube
+  m_Name: Tteok
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

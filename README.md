@@ -56,6 +56,7 @@
 | 누적 스택 | 잔류 블록 위에 다음 블록 생성, 카메라 자동 상승 (DOTween `OutCubic` 보간) |
 | 색상 변화 | HSV 색상환을 따라 층마다 파스텔톤으로 블록 색상 점진 변화 (S=0.35, V=0.98) |
 | 블록 탄성 | 블록 배치 시 Y 스케일 squish→spring 코루틴으로 떡 눌리는 탄성 표현 (squish 40%, spring 15%, 6단계 진동) |
+| 퍼펙트 콤보 보상 | 퍼펙트 판정 3연속 시 현재 블록을 이동 축 방향으로 1.3배 확장, `DOScaleX`/`DOScaleZ` `OutElastic` 0.4초 애니메이션으로 늘어나듯 표현 |
 | Debris 탄성 | 잘린 조각에 PhysicsMaterial 적용, 바닥 충돌 시 통통 튕김 |
 | 점수 UI | 현재 점수·최고 점수 실시간 표시 (TextMeshPro), 최고점수 갱신 시 자동 저장 |
 | BGM·효과음 | BGM 루프 재생, 블록 배치 효과음 재생 (`SoundManager` 싱글턴, 3채널) |
@@ -118,9 +119,10 @@ ProjectA/
             ├─▶ 겹침(overlap) 계산
             │       ├─ overlap ≤ 0         → GameOver()
             │       │                         └─▶ UIManager.ShowGameOver(score)
-            │       ├─ |offset|/blockSize < 0.1 → 퍼펙트 판정 (크기 유지 + 위치 보정)
-            │       └─ 그 외              → Block.Slice() + Block.SpawnDebris()
+            │       ├─ |offset|/blockSize < 0.1 → 퍼펙트 판정 (크기 유지 + 위치 보정, _comboCnt++)
+            │       └─ 그 외              → Block.Slice() + Block.SpawnDebris() (_comboCnt 리셋)
             ├─▶ UIManager.SetScore(score)  — 점수 UI 갱신 (최고점수 갱신·저장 포함)
+            ├─▶ [_comboCnt ≥ 3] ApplyComboBonus() — 블록 1.3배 확장 (DOScaleX/Z OutElastic)
             └─▶ SpawnNext()                — 다음 블록 생성 + 카메라 상승 (DOTween)
 
 음소거 버튼 클릭
@@ -140,6 +142,7 @@ ProjectA/
 
 | 날짜 | 내용 |
 |---|---|
+| 2026-04-14 | 퍼펙트 3연속 콤보 보상 추가 (`ApplyComboBonus`): 이동 축 방향 블록 1.3배 확장, `DOScaleX`/`DOScaleZ` OutElastic 0.4s 애니메이션, `nextBlockScaleX/Z` 캐싱으로 다음 블록 크기 보존 |
 | 2026-04-14 | 블록 메시를 Blender Rounded Cube로 교체, URP `_BaseColor`로 색상 설정 방식 변경 |
 | 2026-04-14 | 블록 탄성 강화 (squish 22%→40%, spring 6%→15%, 4단계→6단계 진동) |
 | 2026-04-14 | 파티클 이펙트 파라미터 설정 (Duration 0.2, Lifetime 0.2~0.5, Size 0.5~1.5 등) |
