@@ -57,6 +57,7 @@
 | 색상 변화 | HSV 색상환을 따라 층마다 파스텔톤으로 블록 색상 점진 변화 (S=0.35, V=0.98) |
 | 블록 탄성 | 블록 배치 시 Y 스케일 squish→spring 코루틴으로 떡 눌리는 탄성 표현 (squish 40%, spring 15%, 6단계 진동) |
 | 퍼펙트 콤보 보상 | 퍼펙트 판정 3연속 시 현재 블록을 이동 축 방향으로 1.3배 확장, `DOScaleX`/`DOScaleZ` `OutElastic` 0.4초 애니메이션으로 늘어나듯 표현 |
+| 카메라 자동 줌아웃 | 배치 시 블록 4 코너를 `WorldToViewportPoint`로 검사, 화면 밖이면 `DOOrthoSize`로 Orthographic Size +1 (OutCubic 1초) |
 | Debris 탄성 | 잘린 조각에 PhysicsMaterial 적용, 바닥 충돌 시 통통 튕김 |
 | 점수 UI | 현재 점수·최고 점수 실시간 표시 (TextMeshPro), 최고점수 갱신 시 자동 저장 |
 | BGM·효과음 | BGM 루프 재생, 블록 배치 효과음 재생 (`SoundManager` 싱글턴, 3채널) |
@@ -78,7 +79,7 @@
 | 유틸리티 | 블록 색상 설정 | `ColorModifier` |
 | UI 매니저 | 점수·최고점수 표시, 홈·게임오버 패널 제어, 음소거 버튼 스프라이트 갱신 | `UIManager` |
 | 오디오 매니저 | BGM·SFX 재생, 뮤트 토글, `OnMuteChanged` 이벤트 발행, 싱글턴 | `SoundManager` |
-| 배경 캐릭터 | NavMesh 기반 참새 배회 AI | `SparrowController` |
+| 카메라 제어 | 블록 높이 추적 상승, 슬라이싱 중심 X/Z 보정, 블록 이탈 시 자동 줌아웃 | `StackManager.MoveCamera` · `FitCameraProjectionSizeToBlock` |
 
 ---
 
@@ -97,7 +98,6 @@ ProjectA/
 │   │   ├── BlockMover.cs              # 블록 왕복 이동·정지 처리
 │   │   ├── UIManager.cs               # UI 관리 (점수, 패널, 음소거 버튼)
 │   │   ├── SoundManager.cs            # BGM·SFX 재생 관리 (싱글턴)
-│   │   ├── SparrowController.cs       # 참새 NavMesh 배회 AI
 │   │   ├── InputManager.cs            # 입력 감지 (미사용, StackManager 내장)
 │   │   └── ColorModifier.cs           # 블록 색상 설정
 │   ├── Sounds/                        # 효과음·BGM 파일
@@ -122,8 +122,9 @@ ProjectA/
             │       ├─ |offset|/blockSize < 0.1 → 퍼펙트 판정 (크기 유지 + 위치 보정, _comboCnt++)
             │       └─ 그 외              → Block.Slice() + Block.SpawnDebris() (_comboCnt 리셋)
             ├─▶ UIManager.SetScore(score)  — 점수 UI 갱신 (최고점수 갱신·저장 포함)
+            ├─▶ FitCameraProjectionSizeToBlock() — 블록 코너 뷰포트 검사 → 이탈 시 DOOrthoSize +1
             ├─▶ [_comboCnt ≥ 3] ApplyComboBonus() — 블록 1.3배 확장 (DOScaleX/Z OutElastic)
-            └─▶ SpawnNext()                — 다음 블록 생성 + 카메라 상승 (DOTween)
+            └─▶ SpawnNext()                — 다음 블록 생성 + 카메라 상승·중심 보정 (DOTween)
 
 음소거 버튼 클릭
     └─▶ SoundManager.ToggleMute()
@@ -142,6 +143,9 @@ ProjectA/
 
 | 날짜 | 내용 |
 |---|---|
+| 2026-04-14 | 카메라 자동 줌아웃 추가 (`FitCameraProjectionSizeToBlock`): 블록 4 코너 뷰포트 검사, 이탈 시 `DOOrthoSize` +1 (OutCubic 1s) |
+| 2026-04-14 | `MoveCamera` 개선: 슬라이싱 중심 이동에 따른 X/Z 보정 추가, duration 0.3s→0.5s |
+| 2026-04-14 | `SparrowController` 제거 |
 | 2026-04-14 | 퍼펙트 3연속 콤보 보상 추가 (`ApplyComboBonus`): 이동 축 방향 블록 1.3배 확장, `DOScaleX`/`DOScaleZ` OutElastic 0.4s 애니메이션, `nextBlockScaleX/Z` 캐싱으로 다음 블록 크기 보존 |
 | 2026-04-14 | 블록 메시를 Blender Rounded Cube로 교체, URP `_BaseColor`로 색상 설정 방식 변경 |
 | 2026-04-14 | 블록 탄성 강화 (squish 22%→40%, spring 6%→15%, 4단계→6단계 진동) |

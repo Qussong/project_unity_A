@@ -1,8 +1,5 @@
-using System;
 using DG.Tweening;
 using PixelBattleText;
-using Unity.Mathematics;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public enum EPlaceState
@@ -69,6 +66,10 @@ public class StackManager : MonoBehaviour
     private float nextBlockScaleX = 0f;
     private float nextBlockScaleZ = 0f;
 
+    // 카메라 이동
+    private float moveCenterX = 0f;
+    private float moveCenterZ = 0f;
+
 
     void Start()
     {
@@ -92,8 +93,6 @@ public class StackManager : MonoBehaviour
         // 콤보 설정 초기화
         _comboCnt = 0;
         _bPerfect = false;
-
-        
     }
 
     void Update()
@@ -219,6 +218,9 @@ public class StackManager : MonoBehaviour
             _currentBlock.SpawnDebris(debrisSize, lastCenter, newCenter, _onX);
         }
 
+        // 카메라 프로젝션 사이즈 블록 사이즈에 맞게 조정 (블록이 커지면 Projection 사이즈 증가)
+        FitCameraProjectionSizeToBlock(_currentBlock);
+
         // 효과음 재생
         SoundManager.Instance.PlaySFX(SoundManager.Instance.clipBlockPlace);
 
@@ -236,11 +238,15 @@ public class StackManager : MonoBehaviour
         nextBlockScaleZ = _currentBlock.Length;
 
         // 콤보 보상
-        if(_comboCnt >= 3)
+        if (_comboCnt >= 3)
         {
             ApplyComboBonus();
             _comboCnt = 0;
         }
+
+        // 중심축 이동량 캐싱, 슬라이싱으로 블록 중심이 이동한 만큼 카메라 X/Z도 보정
+        moveCenterX = _currentBlock.transform.position.x - _lastBlock.transform.position.x;
+        moveCenterZ = _currentBlock.transform.position.z - _lastBlock.transform.position.z;
 
         // 다음 블록 준비
         _lastBlock = _currentBlock;
@@ -258,9 +264,50 @@ public class StackManager : MonoBehaviour
         _bPerfect = false;
     }
 
+    private void FitCameraProjectionSizeToBlock(Block block)
+    {
+        Renderer r = block.GetComponent<Renderer>();
+        Bounds b = r.bounds;
+        Vector3[] outlinePoints = new Vector3[]
+        {
+            new Vector3(b.max.x, b.min.y, b.min.z),
+            new Vector3(b.max.x, b.max.y, b.min.z),
+            new Vector3(b.min.x, b.max.y, b.max.z),
+            new Vector3(b.min.x, b.min.y, b.max.z),
+        };
+
+        // 디버깅용 Cube 생성 로직
+        /* int idx = 0;
+        foreach (Vector3 pos in outlinePoints)
+        {
+            GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            marker.transform.SetParent(objBlockContainer.transform);
+            marker.name = "Debris";
+            marker.GetComponent<Renderer>().material.color = Color.red;
+            marker.transform.localScale = new Vector3(0.05f, 0.05f, 0.05f);
+            marker.transform.position = pos;
+
+            Debug.Log($"[{idx++}] : {_mainCam.WorldToViewportPoint(pos)}");
+        } */
+
+
+        // 카메라 Projection Size 변경
+        foreach (Vector3 pos in outlinePoints)
+        {
+            Vector3 vp = _mainCam.WorldToViewportPoint(pos);
+            if (vp.x > 1f || vp.x < 0f)
+            {
+                // Debug.Log("Camera Projection Size UP!!!");
+                float curSize = _mainCam.orthographicSize;
+                _mainCam.DOOrthoSize(++curSize, 1f).SetEase(Ease.OutCubic);
+                return;
+            }
+        }
+    }
+
     private void ApplyComboBonus()
     {
-        if(_onX)
+        if (_onX)
         {
             float targetX = _currentBlock.Width * 1.3f;
             nextBlockScaleX = targetX;  // 콤보 보상으로 커진 블록의 X 스케일 캐싱
@@ -342,8 +389,12 @@ public class StackManager : MonoBehaviour
     // 카메라를 블록 높이에 맞춰 올림
     void MoveCamera()
     {
-        Vector3 target = _mainCam.transform.position + new Vector3(0, blockHeight, 0);
-        _mainCam.transform.DOMove(target, 0.3f).SetEase(Ease.OutCubic);
+        Vector3 target = _mainCam.transform.position + new Vector3(moveCenterX, blockHeight, moveCenterZ);
+        _mainCam.transform.DOMove(target, 0.5f).SetEase(Ease.OutCubic);
+
+        // 이동량 캐싱 변수 초기화
+        moveCenterX = 0f;
+        moveCenterZ = 0f;
     }
 
     // 게임오버
