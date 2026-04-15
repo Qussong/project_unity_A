@@ -81,6 +81,7 @@
 | UI 매니저 | 점수·최고점수 표시, 홈·게임오버 패널 제어, 음소거 버튼 스프라이트 갱신 | `UIManager` |
 | 오디오 매니저 | BGM·SFX 재생, 뮤트 토글, `OnMuteChanged` 이벤트 발행, 싱글턴 | `SoundManager` |
 | 카메라 제어 | 블록 높이 추적 상승, 슬라이싱 중심 X/Z 보정, 블록 이탈 시 자동 줌아웃, 게임오버 시 전체 스택 뷰 | `StackManager.MoveCamera` · `FitCameraProjectionSizeToBlock` · `ShowFullStack` |
+| 화면 비율 고정 | 9:16 고정 비율 유지, 초과 영역 letterbox 처리 (Screen.width/height 변경 감지 → `cam.rect` 갱신) | `FixedAspectCamera` |
 
 ---
 
@@ -100,7 +101,8 @@ ProjectA/
 │   │   ├── UIManager.cs               # UI 관리 (점수, 패널, 음소거 버튼)
 │   │   ├── SoundManager.cs            # BGM·SFX 재생 관리 (싱글턴)
 │   │   ├── InputManager.cs            # 입력 감지 (미사용, StackManager 내장)
-│   │   └── ColorModifier.cs           # 블록 색상 설정
+│   │   ├── ColorModifier.cs           # 블록 색상 설정
+│   │   └── FixedAspectCamera.cs       # 9:16 고정 비율 letterbox 처리
 │   ├── Sounds/                        # 효과음·BGM 파일
 │   └── Settings/
 │       ├── Mobile_RPAsset.asset       # URP 모바일 설정
@@ -145,6 +147,7 @@ ProjectA/
 
 | 날짜 | 내용 |
 |---|---|
+| 2026-04-16 | `FixedAspectCamera` 추가: 9:16 고정 비율 letterbox 지원, Canvas Render Mode → Screen Space - Camera 설정 |
 | 2026-04-15 | Debris 머티리얼을 `CreatePrimitive` 기본값 대신 블록 머티리얼 복사본(`new Material`)으로 교체 — URP 빌드 마젠타 버그 수정 |
 | 2026-04-15 | 퍼펙트 콤보 보상 조정: 성장률 1.3배 → 10% (`_comboGrowthRate=1.1f`), 콤보당 최대 성장량 0.1 제한 (`_maxComboGrowth`) |
 | 2026-04-15 | 카메라 리셋 수정: `DOKill()`로 진행 중 트윈 중단 후 위치 복원, `localPosition`·`position` 혼용 → `position` 통일, 초기 OrthoSize `_camInitOrthoSize`로 저장·복원 |
