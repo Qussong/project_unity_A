@@ -56,7 +56,7 @@
 | 누적 스택 | 잔류 블록 위에 다음 블록 생성, 카메라 자동 상승 (DOTween `OutCubic` 보간) |
 | 색상 변화 | HSV 색상환을 따라 층마다 파스텔톤으로 블록 색상 점진 변화 (S=0.35, V=0.98) |
 | 블록 탄성 | 블록 배치 시 Y 스케일 squish→spring 코루틴으로 떡 눌리는 탄성 표현 (squish 40%, spring 15%, 6단계 진동) |
-| 퍼펙트 콤보 보상 | 퍼펙트 판정 3연속 시 현재 블록을 이동 축 방향으로 1.3배 확장, `DOScaleX`/`DOScaleZ` `OutElastic` 0.4초 애니메이션으로 늘어나듯 표현 |
+| 퍼펙트 콤보 보상 | 퍼펙트 판정 3연속 시 이동 축 방향 블록을 10% 성장 (콤보당 최대 +0.1 제한), `DOScaleX`/`DOScaleZ` `OutElastic` 0.4초 애니메이션 |
 | 카메라 자동 줌아웃 | 배치 시 블록 4 코너를 `WorldToViewportPoint`로 검사, 화면 밖이면 `DOOrthoSize`로 Orthographic Size +1 (OutCubic 1초) |
 | 게임오버 전체 스택 뷰 | 게임오버 시 스택 전체가 화면에 들어오도록 카메라 위치·Orthographic Size를 DOTween으로 자동 조정 (`ShowFullStack`) |
 | Debris 탄성 | 잘린 조각에 PhysicsMaterial 적용, 바닥 충돌 시 통통 튕김 |
@@ -125,7 +125,7 @@ ProjectA/
             │       └─ 그 외              → Block.Slice() + Block.SpawnDebris() (_comboCnt 리셋)
             ├─▶ UIManager.SetScore(score)  — 점수 UI 갱신 (최고점수 갱신·저장 포함)
             ├─▶ FitCameraProjectionSizeToBlock() — 블록 코너 뷰포트 검사 → 이탈 시 DOOrthoSize +1
-            ├─▶ [_comboCnt ≥ 3] ApplyComboBonus() — 블록 1.3배 확장 (DOScaleX/Z OutElastic)
+            ├─▶ [_comboCnt ≥ 3] ApplyComboBonus() — 블록 10% 성장 (콤보당 최대 +0.1, DOScaleX/Z OutElastic)
             └─▶ SpawnNext()                — 다음 블록 생성 + 카메라 상승·중심 보정 (DOTween)
 
 음소거 버튼 클릭
@@ -145,6 +145,10 @@ ProjectA/
 
 | 날짜 | 내용 |
 |---|---|
+| 2026-04-15 | Debris 머티리얼을 `CreatePrimitive` 기본값 대신 블록 머티리얼 복사본(`new Material`)으로 교체 — URP 빌드 마젠타 버그 수정 |
+| 2026-04-15 | 퍼펙트 콤보 보상 조정: 성장률 1.3배 → 10% (`_comboGrowthRate=1.1f`), 콤보당 최대 성장량 0.1 제한 (`_maxComboGrowth`) |
+| 2026-04-15 | 카메라 리셋 수정: `DOKill()`로 진행 중 트윈 중단 후 위치 복원, `localPosition`·`position` 혼용 → `position` 통일, 초기 OrthoSize `_camInitOrthoSize`로 저장·복원 |
+| 2026-04-15 | 블록 스폰 거리 최솟값 추가: `Mathf.Max(blockScale * 2f, 2f)` — 블록이 작아져도 화면 안에서 생성되지 않도록 보장 |
 | 2026-04-14 | 게임오버 전체 스택 뷰 추가 (`ShowFullStack`): `WorldToViewportPoint`·`ViewportToWorldPoint` 역산으로 카메라 위치·Orthographic Size 자동 계산, DOTween OutCubic 1초 애니메이션 |
 | 2026-04-14 | 카메라 자동 줌아웃 추가 (`FitCameraProjectionSizeToBlock`): 블록 4 코너 뷰포트 검사, 이탈 시 `DOOrthoSize` +1 (OutCubic 1s) |
 | 2026-04-14 | `MoveCamera` 개선: 슬라이싱 중심 이동에 따른 X/Z 보정 추가, duration 0.3s→0.5s |

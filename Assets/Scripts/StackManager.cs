@@ -22,7 +22,7 @@ public class StackManager : MonoBehaviour
     public float blockHeight = 0.2f;    // 블록 두께 (y)
     public float minMoveSpeed = 2f;     // 시작 속도
     public float maxMoveSpeed = 5f;     // 최대 속도
-    public float blockPosDistance = 2f;
+    // public float spawnDistance = 2f;
 
     [Header("UI")]
     public UIManager uiManager;
@@ -45,8 +45,6 @@ public class StackManager : MonoBehaviour
     private int _score = 0;
     private bool _onX = true;       // 이동 축 (층마다 교대)
     private float _currentY = 0f;   // 다음 블록 Y 위치
-    private float _initBlockWidth;  // 초기 블록 너비 (x)
-    private float _initBlockLength; // 초기 블록 길이 (z)
 
     // 블록 색상 — 층마다 점진적으로 변함
     private Color _blockColor = Color.cyan;
@@ -60,16 +58,18 @@ public class StackManager : MonoBehaviour
     // 메인 카메라 정보 캐싱
     private Camera _mainCam = null;
     private Vector3 _camInitPos = Vector3.zero;
+    private float _camInitOrthoSize = 0;
 
     // Perfect 콤보
     private int _comboCnt = 0;
-    private bool _bPerfect = false;
-    private float nextBlockScaleX = 0f;
-    private float nextBlockScaleZ = 0f;
+    private float _nextBlockScaleX = 0f;
+    private float _nextBlockScaleZ = 0f;
+    private const float _comboGrowthRate = 1.1f;  // 콤보 성장률 10%
+    private const float _maxComboGrowth = 0.1f;  // 콤보당 최대 성장량
 
     // 카메라 이동
-    private float moveCenterX = 0f;
-    private float moveCenterZ = 0f;
+    private float _moveCenterX = 0f;
+    private float _moveCenterZ = 0f;
 
 
     void Start()
@@ -77,11 +77,8 @@ public class StackManager : MonoBehaviour
         // 메인 카메라 캐싱
         _mainCam = Camera.main;
         // 카메라 위치 저장
-        _camInitPos = _mainCam.transform.localPosition;
-
-        // 초기 블록 크기 저장
-        _initBlockWidth = objBaseBlock.transform.localScale.x;
-        _initBlockLength = objBaseBlock.transform.localScale.z;
+        _camInitPos = _mainCam.transform.position;
+        _camInitOrthoSize = _mainCam.orthographicSize;
 
         // 게임 플레이 버튼 이벤트 연결
         uiManager.btnStartGame.onClick.AddListener(StartGame);
@@ -93,7 +90,6 @@ public class StackManager : MonoBehaviour
 
         // 콤보 설정 초기화
         _comboCnt = 0;
-        _bPerfect = false;
     }
 
     void Update()
@@ -142,8 +138,8 @@ public class StackManager : MonoBehaviour
         _currentY = blockHeight / 2f;  // 다음 블록 Y 위치
 
         // 디음 블록 스케일 캐싱
-        nextBlockScaleX = _lastBlock.Width;
-        nextBlockScaleZ = _lastBlock.Length;
+        _nextBlockScaleX = _lastBlock.Width;
+        _nextBlockScaleZ = _lastBlock.Length;
     }
 
     // 탭 시: 겹침 계산 → 자르기 → 다음 블록 생성
@@ -175,8 +171,6 @@ public class StackManager : MonoBehaviour
             // 매칭 상태
             _placeState = EPlaceState.PERFECT;
 
-            // 퍼펙트 여부 체크
-            _bPerfect = true;
             _comboCnt += 1;
 
             // 크기 유지
@@ -235,8 +229,8 @@ public class StackManager : MonoBehaviour
         uiManager.SetScore(_score);
 
         // 다음 블록의 사이즈 캐싱
-        nextBlockScaleX = _currentBlock.Width;
-        nextBlockScaleZ = _currentBlock.Length;
+        _nextBlockScaleX = _currentBlock.Width;
+        _nextBlockScaleZ = _currentBlock.Length;
 
         // 콤보 보상
         if (_comboCnt >= 3)
@@ -246,8 +240,8 @@ public class StackManager : MonoBehaviour
         }
 
         // 중심축 이동량 캐싱, 슬라이싱으로 블록 중심이 이동한 만큼 카메라 X/Z도 보정
-        moveCenterX = _currentBlock.transform.position.x - _lastBlock.transform.position.x;
-        moveCenterZ = _currentBlock.transform.position.z - _lastBlock.transform.position.z;
+        _moveCenterX = _currentBlock.transform.position.x - _lastBlock.transform.position.x;
+        _moveCenterZ = _currentBlock.transform.position.z - _lastBlock.transform.position.z;
 
         // 다음 블록 준비
         _lastBlock = _currentBlock;
@@ -261,8 +255,6 @@ public class StackManager : MonoBehaviour
         // 다음 블록 생성
         SpawnNext();
 
-        // 퍼펙트 여부 초기화
-        _bPerfect = false;
     }
 
     private void FitCameraProjectionSizeToBlock(Block block)
@@ -310,15 +302,29 @@ public class StackManager : MonoBehaviour
     {
         if (_onX)
         {
-            float targetX = _currentBlock.Width * 1.3f;
-            nextBlockScaleX = targetX;  // 콤보 보상으로 커진 블록의 X 스케일 캐싱
-            _currentBlock.transform.DOScaleX(targetX, 0.4f).SetEase(Ease.OutElastic);
+            // float bonusScaleX = _currentBlock.Width * _comboGrowthRate;
+            // float offsetX = bonusScaleX - _currentBlock.Width;
+            // float growthX = Mathf.Min(offsetX, _maxComboGrowth);
+            // float nextBlockScaleX = _currentBlock.Width + growthX;
+            float growthX = Mathf.Min(_currentBlock.Width * (_comboGrowthRate - 1f), _maxComboGrowth);
+            _nextBlockScaleX = _currentBlock.Width + growthX;
+            // float targetX = Mathf.Min(_currentBlock.Width * _comboGrowthRate, _maxComboGrowth);
+            // _nextBlockScaleX = targetX;  // 콤보 보상으로 커진 블록의 X 스케일 캐싱
+            // _nextBlockScaleX = nextBlockScaleX;  // 콤보 보상으로 커진 블록의 X 스케일 캐싱
+            _currentBlock.transform.DOScaleX(_nextBlockScaleX, 0.4f).SetEase(Ease.OutElastic);
         }
         else
         {
-            float targetZ = _currentBlock.Length * 1.3f;
-            nextBlockScaleZ = targetZ;  // 콤보 보상으로 커진 블록의 Z 스케일 캐싱
-            _currentBlock.transform.DOScaleZ(targetZ, 0.4f).SetEase(Ease.OutElastic);
+            // float bonusScaleZ = _currentBlock.Length * _comboGrowthRate;
+            // float offsetZ = bonusScaleZ - _currentBlock.Length;
+            // float growthZ = Mathf.Min(offsetZ, _maxComboGrowth);
+            // float nextBlockScaleZ = _currentBlock.Length + growthZ;
+            float growthZ = Mathf.Min(_currentBlock.Length * (_comboGrowthRate - 1f), _maxComboGrowth);
+            _nextBlockScaleZ = _currentBlock.Length + growthZ;
+            // float targetZ = Mathf.Min(_currentBlock.Length * _comboGrowthRate, _maxComboGrowth);
+            // _nextBlockScaleZ = targetZ;  // 콤보 보상으로 커진 블록의 Z 스케일 캐싱
+            // _nextBlockScaleZ = nextBlockScaleZ;  // 콤보 보상으로 커진 블록의 Z 스케일 캐싱
+            _currentBlock.transform.DOScaleZ(_nextBlockScaleZ, 0.4f).SetEase(Ease.OutElastic);
         }
     }
 
@@ -359,21 +365,23 @@ public class StackManager : MonoBehaviour
     void SpawnNext()
     {
         // 블록 색상 점진 변화 (HSV 회전)
-        float h, s, v;
-        Color.RGBToHSV(_blockColor, out h, out s, out v);
+        Color.RGBToHSV(_blockColor, out float h, out _, out _);
         h = (h + 0.07f) % 1f;
         _blockColor = Color.HSVToRGB(h, 0.35f, 0.98f);
 
+        // 블록 스폰 거리
+        float spawnDistance = Mathf.Max(_onX ? _nextBlockScaleX * 2f : _nextBlockScaleZ * 2f, 2f);
+
         // 시작 위치 — 이동 축 반대편 끝에서 시작
         Vector3 startPos = new Vector3(
-            _onX ? -blockPosDistance : _lastBlock.PosX,   // X축 이동이면 왼쪽 끝
+            _onX ? -spawnDistance : _lastBlock.PosX,   // X축 이동이면 왼쪽 끝
             _currentY,
-            _onX ? _lastBlock.PosZ : -blockPosDistance    // Z축 이동이면 앞쪽 끝
+            _onX ? _lastBlock.PosZ : -spawnDistance    // Z축 이동이면 앞쪽 끝
         );
 
-        Vector3 scale = new Vector3(nextBlockScaleX,
+        Vector3 scale = new Vector3(_nextBlockScaleX,
                                     blockHeight,
-                                    nextBlockScaleZ);
+                                    _nextBlockScaleZ);
 
         GameObject go = Instantiate(blockPrefab, startPos, Quaternion.identity, objBlockContainer.transform);
         _currentBlock = go.GetComponent<Block>();
@@ -381,21 +389,22 @@ public class StackManager : MonoBehaviour
 
         // 블록 이동 컴포넌트 세팅
         BlockMover mover = go.AddComponent<BlockMover>();
+        
         // 점수 오를수록 빨라짐
         mover.moveSpeed = Mathf.Min(minMoveSpeed + _score * 0.01f, maxMoveSpeed);
         mover.moveOnX = _onX;
-        mover.moveRange = blockPosDistance;
+        mover.moveRange = spawnDistance;
     }
 
     // 카메라를 블록 높이에 맞춰 올림
     void MoveCamera()
     {
-        Vector3 target = _mainCam.transform.position + new Vector3(moveCenterX, blockHeight, moveCenterZ);
+        Vector3 target = _mainCam.transform.position + new Vector3(_moveCenterX, blockHeight, _moveCenterZ);
         _mainCam.transform.DOMove(target, 0.5f).SetEase(Ease.OutCubic);
 
         // 이동량 캐싱 변수 초기화
-        moveCenterX = 0f;
-        moveCenterZ = 0f;
+        _moveCenterX = 0f;
+        _moveCenterZ = 0f;
     }
 
     // 게임오버
@@ -416,7 +425,6 @@ public class StackManager : MonoBehaviour
 
         // 콤보 값 초기화
         _comboCnt = 0;
-        _bPerfect = false;
 
         // 게임 종료 패널 표시
         uiManager.ShowGameOver(_score);
@@ -433,7 +441,7 @@ public class StackManager : MonoBehaviour
 
         // 바닥·꼭대기 점을 뷰포트 좌표(0~1)로 변환
         Vector3 bottomVP = _mainCam.WorldToViewportPoint(new Vector3(0f, stackBottomY, 0f));
-        Vector3 topVP    = _mainCam.WorldToViewportPoint(new Vector3(0f, stackTopY,    0f));
+        Vector3 topVP = _mainCam.WorldToViewportPoint(new Vector3(0f, stackTopY, 0f));
 
         // 현재 뷰포트에서 스택이 차지하는 Y 비율
         float currentSpan = topVP.y - bottomVP.y;
@@ -483,9 +491,11 @@ public class StackManager : MonoBehaviour
         _currentBlock = null;
         _blockColor = Color.cyan;
 
-        // 카메라 위치 리셋
-        _mainCam.transform.localPosition = _camInitPos;
-        _mainCam.DOOrthoSize(2f, 1f).SetEase(Ease.OutCubic);
+        // 카메라 위치 리셋 - 진행 중인 트윈을 먼저 종료 후 초기 위치로 복원
+        _mainCam.transform.DOKill();
+        _mainCam.DOKill();
+        _mainCam.transform.position = _camInitPos;
+        _mainCam.orthographicSize = _camInitOrthoSize;
 
         // baseBlock 재설정
         SetupBaseBlock();

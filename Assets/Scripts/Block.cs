@@ -71,9 +71,13 @@ public class Block : MonoBehaviour
         // 조각 위치 설정
         debris.transform.position = debrisPos;
 
-        // 색상
-        // debris.GetComponent<Renderer>().material.color = GetComponent<Renderer>().material.color;
-        debris.GetComponent<Renderer>().material.SetColor("_BaseColor", GetComponent<Renderer>().material.GetColor("_BaseColor"));
+        // 색상 - 블록의 머티리얼을 복사해서 적용 (CreatePrimitive의 기본 셰이더는 URP 빌드에서 마젠타가 됨)
+        Renderer blockRenderer = GetComponent<Renderer>();
+        Renderer debrisRenderer = debris.GetComponent<Renderer>();
+        debrisRenderer.material = new Material(blockRenderer.material);
+
+        // 블록의 매시를 Debris에 복사
+        debris.GetComponent<MeshFilter>().mesh = GetComponent<MeshFilter>().mesh;
 
         // 중력으로 떨어짐
         Rigidbody rb = debris.AddComponent<Rigidbody>();
