@@ -65,8 +65,8 @@ public class StackManager : MonoBehaviour
     private int _comboCnt = 0;
     private float _nextBlockScaleX = 0f;
     private float _nextBlockScaleZ = 0f;
-    private const float _comboGrowthRate = 1.1f;  // 콤보 성장률 10%
-    private const float _maxComboGrowth = 0.1f;  // 콤보당 최대 성장량
+    private const float _comboGrowthRate = 1.2f;  // 콤보 성장률 10%
+    private const float _maxComboGrowth = 0.2f;  // 콤보당 최대 성장량
 
     // 카메라 이동
     private float _moveCenterX = 0f;
@@ -525,7 +525,5 @@ public class StackManager : MonoBehaviour
             //
         }
     }
-
-
 
 }
