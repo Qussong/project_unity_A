@@ -2,7 +2,7 @@
 
 > 하이퍼캐주얼 게임 **Stack** 모작 — Unity로 구현하는 블록 쌓기 게임
 
-![게임 플레이](Refer/Sample.gif)
+<img src="Refer/Sample.gif" width="200"/>
 
 | 항목 | 내용 |
 |---|---|
