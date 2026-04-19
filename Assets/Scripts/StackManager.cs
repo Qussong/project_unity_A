@@ -393,7 +393,7 @@ public class StackManager : MonoBehaviour
         BlockMover mover = go.AddComponent<BlockMover>();
         
         // 점수 오를수록 빨라짐
-        mover.moveSpeed = Mathf.Min(minMoveSpeed + _score * 0.03f, maxMoveSpeed);
+        mover.moveSpeed = Mathf.Min(minMoveSpeed + _score * 0.02f, maxMoveSpeed);
         mover.moveOnX = _onX;
         mover.moveRange = spawnDistance;
     }
