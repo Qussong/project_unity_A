@@ -1,6 +1,7 @@
 using System;
 using DG.Tweening;
 using PixelBattleText;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public enum EPlaceState
@@ -160,6 +161,21 @@ public class StackManager : MonoBehaviour
         // 4. 겹침이 없으면 게임오버
         if (overlap <= 0)
         {
+            // 현재 블록 낙하
+            Rigidbody rb = _currentBlock.AddComponent<Rigidbody>();
+            rb.AddForce(new Vector3(0, -2f, 0), ForceMode.Impulse);
+
+            // 탄성 부여
+            PhysicsMaterial bounceMat = new PhysicsMaterial();
+            bounceMat.bounciness = 0.5f;
+            bounceMat.dynamicFriction = 0.2f;
+            bounceMat.staticFriction = 0.2f;
+            bounceMat.bounceCombine = PhysicsMaterialCombine.Maximum;
+            _currentBlock.GetComponent<Collider>().material = bounceMat;
+
+            // 3초 후 파괴
+            Destroy(_currentBlock, 3f);
+
             GameOver();
             return;
         }
@@ -302,28 +318,14 @@ public class StackManager : MonoBehaviour
     {
         if (_onX)
         {
-            // float bonusScaleX = _currentBlock.Width * _comboGrowthRate;
-            // float offsetX = bonusScaleX - _currentBlock.Width;
-            // float growthX = Mathf.Min(offsetX, _maxComboGrowth);
-            // float nextBlockScaleX = _currentBlock.Width + growthX;
             float growthX = Mathf.Min(_currentBlock.Width * (_comboGrowthRate - 1f), _maxComboGrowth);
             _nextBlockScaleX = _currentBlock.Width + growthX;
-            // float targetX = Mathf.Min(_currentBlock.Width * _comboGrowthRate, _maxComboGrowth);
-            // _nextBlockScaleX = targetX;  // 콤보 보상으로 커진 블록의 X 스케일 캐싱
-            // _nextBlockScaleX = nextBlockScaleX;  // 콤보 보상으로 커진 블록의 X 스케일 캐싱
             _currentBlock.transform.DOScaleX(_nextBlockScaleX, 0.4f).SetEase(Ease.OutElastic);
         }
         else
         {
-            // float bonusScaleZ = _currentBlock.Length * _comboGrowthRate;
-            // float offsetZ = bonusScaleZ - _currentBlock.Length;
-            // float growthZ = Mathf.Min(offsetZ, _maxComboGrowth);
-            // float nextBlockScaleZ = _currentBlock.Length + growthZ;
             float growthZ = Mathf.Min(_currentBlock.Length * (_comboGrowthRate - 1f), _maxComboGrowth);
             _nextBlockScaleZ = _currentBlock.Length + growthZ;
-            // float targetZ = Mathf.Min(_currentBlock.Length * _comboGrowthRate, _maxComboGrowth);
-            // _nextBlockScaleZ = targetZ;  // 콤보 보상으로 커진 블록의 Z 스케일 캐싱
-            // _nextBlockScaleZ = nextBlockScaleZ;  // 콤보 보상으로 커진 블록의 Z 스케일 캐싱
             _currentBlock.transform.DOScaleZ(_nextBlockScaleZ, 0.4f).SetEase(Ease.OutElastic);
         }
     }
@@ -391,7 +393,7 @@ public class StackManager : MonoBehaviour
         BlockMover mover = go.AddComponent<BlockMover>();
         
         // 점수 오를수록 빨라짐
-        mover.moveSpeed = Mathf.Min(minMoveSpeed + _score * 0.01f, maxMoveSpeed);
+        mover.moveSpeed = Mathf.Min(minMoveSpeed + _score * 0.03f, maxMoveSpeed);
         mover.moveOnX = _onX;
         mover.moveRange = spawnDistance;
     }

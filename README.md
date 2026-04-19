@@ -2,7 +2,7 @@
 
 > 하이퍼캐주얼 게임 **Stack** 모작 — Unity로 구현하는 블록 쌓기 게임
 
-`[📷 이미지 배치 예정 - 게임 플레이 화면]`
+![게임 플레이](Refer/Sample.gif)
 
 | 항목 | 내용 |
 |---|---|
@@ -11,6 +11,19 @@
 | 엔진 | Unity 6 (URP) |
 | 언어 | C# |
 | 버전 | 0.7.0 |
+
+---
+
+## 진행 상황
+
+| 항목 | 상태 |
+|---|---|
+| 블록 스택 핵심 게임플레이 | ✅ 완료 |
+| 슬라이싱 / 퍼펙트 판정 / 콤보 보상 | ✅ 완료 |
+| 게임오버 전체 스택 뷰 / 카메라 자동 줌아웃 | ✅ 완료 |
+| BGM·효과음 / 음소거 토글 | ✅ 완료 |
+| 9:16 letterbox 고정 비율 | ✅ 완료 |
+| 배경 꾸미기 (참새 NavMesh 패트롤 등) | 🚧 진행 중 |
 
 ---
 
@@ -82,6 +95,7 @@
 | 오디오 매니저 | BGM·SFX 재생, 뮤트 토글, `OnMuteChanged` 이벤트 발행, 싱글턴 | `SoundManager` |
 | 카메라 제어 | 블록 높이 추적 상승, 슬라이싱 중심 X/Z 보정, 블록 이탈 시 자동 줌아웃, 게임오버 시 전체 스택 뷰 | `StackManager.MoveCamera` · `FitCameraProjectionSizeToBlock` · `ShowFullStack` |
 | 화면 비율 고정 | 9:16 고정 비율 유지, 초과 영역 letterbox 처리 (Screen.width/height 변경 감지 → `cam.rect` 갱신) | `FixedAspectCamera` |
+| 배경 오브젝트 | NavMeshAgent 기반 랜덤 영역 패트롤, 장애물 회피, idle/walk 애니메이션 전환 | `SparrowPatrol` |
 
 ---
 
@@ -102,7 +116,8 @@ ProjectA/
 │   │   ├── SoundManager.cs            # BGM·SFX 재생 관리 (싱글턴)
 │   │   ├── InputManager.cs            # 입력 감지 (미사용, StackManager 내장)
 │   │   ├── ColorModifier.cs           # 블록 색상 설정
-│   │   └── FixedAspectCamera.cs       # 9:16 고정 비율 letterbox 처리
+│   │   ├── FixedAspectCamera.cs       # 9:16 고정 비율 letterbox 처리
+│   │   └── SparrowPatrol.cs           # 참새 NavMesh 랜덤 패트롤 (배경 오브젝트)
 │   ├── Sounds/                        # 효과음·BGM 파일
 │   └── Settings/
 │       ├── Mobile_RPAsset.asset       # URP 모바일 설정
