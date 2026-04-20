@@ -27,6 +27,7 @@ public class StackManager : MonoBehaviour
 
     [Header("UI")]
     public UIManager uiManager;
+    // public TouchHandler touchHandlerPlaceBlock;
 
     [Header("Effect")]
     public ParticleSystem stackEffectPrefab;
@@ -86,8 +87,11 @@ public class StackManager : MonoBehaviour
         // 게임 플레이 버튼 이벤트 연결
         uiManager.btnStartGame.onClick.AddListener(StartGame);
 
-        // 블록 배치 버튼 이벤트 연결
-        uiManager.btnPlaceBlock.onClick.AddListener(PlaceBlock);
+        // 블록 배치: PointerDown 즉시 반응 (onClick의 PointerUp 지연 제거)
+        if (uiManager.touchHandlerPlaceBlock != null)
+            uiManager.touchHandlerPlaceBlock.onPointerDown.AddListener(PlaceBlock);
+        // else
+        //     uiManager.btnPlaceBlock.onClick.AddListener(PlaceBlock);
 
         // 재시작 버튼 이벤트 연결
         uiManager.btnRestart.onClick.AddListener(ResetGame);

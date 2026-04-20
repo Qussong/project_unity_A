@@ -3,8 +3,8 @@
 > 하이퍼캐주얼 게임 **Stack** 모작 — Unity로 구현하는 블록 쌓기 게임
 
 > [!NOTE]
-> 🚧 **Toss 인앱 게임 출시를 위한 빌드 작업이 진행 중입니다.**
-> Apps in Toss (AIT) SDK를 통해 Toss 앱 내 게임으로 배포하는 과정을 준비하고 있습니다.
+> Apps in Toss (AIT) SDK를 통해 Toss 앱 내 게임으로 배포합니다.
+> 앱 이름: `project-a-stack-tteok` / AIT SDK 2.4.7
 
 <img src="Refer/Sample.gif" width="200"/>
 
@@ -28,6 +28,10 @@
 | BGM·효과음 / 음소거 토글 | ✅ 완료 |
 | 9:16 letterbox 고정 비율 | ✅ 완료 |
 | 배경 꾸미기 (참새 NavMesh 패트롤 등) | 🚧 진행 중 |
+| 햅틱 피드백 (PERFECT / GOOD / BAD / 음소거) | ✅ 완료 |
+| 터치 입력 즉시 반응 (PointerDown 처리) | ✅ 완료 |
+| iOS 오디오 자동재생 우회 (AudioContext 패치) | ✅ 완료 |
+| AIT 배포 (`pnpm exec ait deploy`) | ✅ 완료 |
 
 ---
 
@@ -60,6 +64,25 @@
 
 ---
 
+## AIT 빌드 파이프라인
+
+```
+Unity Editor
+    └─ WebGL Build → webgl/
+            └─ CopyWebGLToPublic → ait-build/public/
+                    └─ pnpm exec ait build → ait-build/dist/web/
+                            └─ pnpm exec ait deploy → 토스 앱인토스
+```
+
+```bash
+# ait-build 디렉토리에서 실행
+cd ait-build
+pnpm exec ait build
+pnpm exec ait deploy
+```
+
+---
+
 ## 핵심 기능
 
 | 기능 | 설명 |
@@ -82,6 +105,10 @@
 | 음소거 토글 | 인게임 버튼으로 BGM·SFX 동시 뮤트, 버튼 스프라이트 ON/OFF 전환 |
 | BGM 볼륨 페이드 | 화면 전환 시 BGM 볼륨을 DOTween으로 부드럽게 전환 (홈·게임오버 0.5, 게임 중 0.15) |
 | 블록 메시 | Blender에서 제작한 Rounded Cube 메시 적용, URP `_BaseColor` 프로퍼티로 색상 설정 |
+| 햅틱 피드백 | 판정 결과별 진동 패턴 제공 — PERFECT: BasicMedium, GOOD: SoftMedium, BAD: Error, 음소거: Wiggle (`HapticManager`, AIT SDK 연동) |
+| 터치 입력 즉시 반응 | `Button.onClick`(PointerUp) 대신 `TouchHandler`(IPointerDownHandler)로 터치 즉시 블록 배치, 모바일 입력 지연 제거 |
+| iOS 오디오 우회 | iOS Safari의 AudioContext autoplay 정책으로 첫 터치 전 오디오가 무음인 문제를 `ait-build/index.html`의 AudioContext 패치로 해결 |
+| 프레임 고정 | `Application.targetFrameRate = 60`으로 모바일 프레임 고정 |
 
 ---
 
@@ -91,12 +118,14 @@
 
 | 레이어 | 역할 | 주요 클래스 |
 |---|---|---|
-| 게임 매니저 | 입력 감지, 블록 생성·배치, 슬라이싱 판정, 점수·게임오버 관리 | `StackManager` |
+| 게임 매니저 | 블록 생성·배치, 슬라이싱 판정, 점수·게임오버 관리 | `StackManager` |
 | 블록 데이터 | 블록 크기·위치 관리, 슬라이싱 연산, Debris 생성, 탄성 애니메이션 | `Block` |
 | 블록 이동 | X/Z축 왕복 이동, 범위 끝 방향 반전, 정지 처리 | `BlockMover` |
+| 터치 입력 | `IPointerDownHandler` 구현, PointerDown 즉시 콜백 발행 | `TouchHandler` |
 | 유틸리티 | 블록 색상 설정 | `ColorModifier` |
 | UI 매니저 | 점수·최고점수 표시, 홈·게임오버 패널 제어, 음소거 버튼 스프라이트 갱신 | `UIManager` |
 | 오디오 매니저 | BGM·SFX 재생, 뮤트 토글, `OnMuteChanged` 이벤트 발행, 싱글턴 | `SoundManager` |
+| 햅틱 매니저 | AIT SDK 햅틱 API 래핑, 판정 결과별 진동 패턴 호출 | `HapticManager` |
 | 카메라 제어 | 블록 높이 추적 상승, 슬라이싱 중심 X/Z 보정, 블록 이탈 시 자동 줌아웃, 게임오버 시 전체 스택 뷰 | `StackManager.MoveCamera` · `FitCameraProjectionSizeToBlock` · `ShowFullStack` |
 | 화면 비율 고정 | 9:16 고정 비율 유지, 초과 영역 letterbox 처리 (Screen.width/height 변경 감지 → `cam.rect` 갱신) | `FixedAspectCamera` |
 | 배경 오브젝트 | NavMeshAgent 기반 랜덤 영역 패트롤, 장애물 회피, idle/walk 애니메이션 전환 | `SparrowPatrol` |
@@ -117,8 +146,9 @@ ProjectA/
 │   │   ├── Block.cs                   # 블록 데이터·슬라이싱 로직
 │   │   ├── BlockMover.cs              # 블록 왕복 이동·정지 처리
 │   │   ├── UIManager.cs               # UI 관리 (점수, 패널, 음소거 버튼)
+│   │   ├── TouchHandler.cs            # IPointerDownHandler — PointerDown 즉시 반응 입력
 │   │   ├── SoundManager.cs            # BGM·SFX 재생 관리 (싱글턴)
-│   │   ├── InputManager.cs            # 입력 감지 (미사용, StackManager 내장)
+│   │   ├── HapticManager.cs           # AIT SDK 햅틱 API 래핑
 │   │   ├── ColorModifier.cs           # 블록 색상 설정
 │   │   ├── FixedAspectCamera.cs       # 9:16 고정 비율 letterbox 처리
 │   │   └── SparrowPatrol.cs           # 참새 NavMesh 랜덤 패트롤 (배경 오브젝트)
@@ -166,6 +196,11 @@ ProjectA/
 
 | 날짜 | 내용 |
 |---|---|
+| 2026-04-21 | `TouchHandler` 추가: `IPointerDownHandler` 기반 PointerDown 즉시 반응 입력으로 모바일 터치 지연 제거 |
+| 2026-04-21 | `HapticManager` 추가: AIT SDK 햅틱 API 래핑, PERFECT·GOOD·BAD·음소거 진동 패턴 적용 |
+| 2026-04-21 | `Application.targetFrameRate = 60` 설정으로 모바일 프레임 고정 |
+| 2026-04-21 | iOS 오디오 우회 패치: `ait-build/index.html`에 AudioContext 첫 터치 resume 스크립트 추가 |
+| 2026-04-21 | AIT 번들 첫 배포: `pnpm exec ait deploy` 성공 (`intoss-private://project-a-stack-tteok`) |
 | 2026-04-20 | Toss 인앱 게임 출시를 위한 AIT SDK 연동 시작 (`im.toss.apps-in-toss-unity-sdk` 패키지 추가, AIT Configuration 설정) |
 | 2026-04-20 | 아이콘 이미지 리사이즈: `icon-low.png` (762×777 → 600×600), `icon2-low.png` (854×878 → 600×600) |
 | 2026-04-20 | 블록 이동 속도 공식 조정: `0.03f` → `0.02f` (난이도 상승 곡선 완화) |

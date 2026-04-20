@@ -19,7 +19,8 @@ public class UIManager : MonoBehaviour
 
     [Header("InGame Panel")]
     public GameObject panelInGame;
-    public Button btnPlaceBlock;
+    // public Button btnPlaceBlock;
+    public TouchHandler touchHandlerPlaceBlock;
 
     [Header("GameOver Panel")]
     public GameObject panelGameOver;
