@@ -2,6 +2,10 @@
 
 > 하이퍼캐주얼 게임 **Stack** 모작 — Unity로 구현하는 블록 쌓기 게임
 
+> [!NOTE]
+> 🚧 **Toss 인앱 게임 출시를 위한 빌드 작업이 진행 중입니다.**
+> Apps in Toss (AIT) SDK를 통해 Toss 앱 내 게임으로 배포하는 과정을 준비하고 있습니다.
+
 <img src="Refer/Sample.gif" width="200"/>
 
 | 항목 | 내용 |
@@ -162,6 +166,9 @@ ProjectA/
 
 | 날짜 | 내용 |
 |---|---|
+| 2026-04-20 | Toss 인앱 게임 출시를 위한 AIT SDK 연동 시작 (`im.toss.apps-in-toss-unity-sdk` 패키지 추가, AIT Configuration 설정) |
+| 2026-04-20 | 아이콘 이미지 리사이즈: `icon-low.png` (762×777 → 600×600), `icon2-low.png` (854×878 → 600×600) |
+| 2026-04-20 | 블록 이동 속도 공식 조정: `0.03f` → `0.02f` (난이도 상승 곡선 완화) |
 | 2026-04-16 | `FixedAspectCamera` 추가: 9:16 고정 비율 letterbox 지원, Canvas Render Mode → Screen Space - Camera 설정 |
 | 2026-04-15 | Debris 머티리얼을 `CreatePrimitive` 기본값 대신 블록 머티리얼 복사본(`new Material`)으로 교체 — URP 빌드 마젠타 버그 수정 |
 | 2026-04-15 | 퍼펙트 콤보 보상 조정: 성장률 1.3배 → 10% (`_comboGrowthRate=1.1f`), 콤보당 최대 성장량 0.1 제한 (`_maxComboGrowth`) |
