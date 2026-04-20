@@ -6,17 +6,22 @@ using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
-    [Header("시작화면 UI")]
-    public GameObject panelHome;
-    public Button btnStartGame;
-
-    [Header("인게임 UI")]
+    [Header("UI Panel")]
+    public GameObject panelUI;
     public TMP_Text textScore;
     public TMP_Text textBestScore;
     public Button btnSoundControl;
     public List<Sprite> listSoundControlSprite; // 0 : ON , 1 : OFF
 
-    [Header("게임오버 패널")]
+    [Header("Home Panel")]
+    public GameObject panelHome;
+    public Button btnStartGame;
+
+    [Header("InGame Panel")]
+    public GameObject panelInGame;
+    public Button btnPlaceBlock;
+
+    [Header("GameOver Panel")]
     public GameObject panelGameOver;
     public TMP_Text textFinalScore;
     public Button btnRestart;
@@ -25,8 +30,14 @@ public class UIManager : MonoBehaviour
 
     private void Awake()
     {
-        // 홈 화면 패널 표출
+        // UI 패널 표출
+        panelUI.SetActive(true);
+
+        // 홈 패널 표출
         panelHome.SetActive(true);
+
+        // 인게임 패널 숨김
+        panelInGame.SetActive(false);
 
         // 게임오버 패널 숨기기
         panelGameOver.SetActive(false);
@@ -41,6 +52,7 @@ public class UIManager : MonoBehaviour
 
         // 음소거 버튼 리스너 등록
         btnSoundControl.onClick.AddListener(SoundManager.Instance.ToggleMute);
+        btnSoundControl.onClick.AddListener(() => HapticManager.Vibrate(HapticManager.HapticType.Wiggle));
 
         // SoundManager.OnMuteChanged 함수 등록
         SoundManager.Instance.OnMuteChanged += UpdateSoundButtonSprite;

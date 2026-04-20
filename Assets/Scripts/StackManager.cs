@@ -3,6 +3,7 @@ using DG.Tweening;
 using PixelBattleText;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.UI;
 
 public enum EPlaceState
 {
@@ -23,7 +24,6 @@ public class StackManager : MonoBehaviour
     public float blockHeight = 0.2f;    // 블록 두께 (y)
     public float minMoveSpeed = 2f;     // 시작 속도
     public float maxMoveSpeed = 5f;     // 최대 속도
-    // public float spawnDistance = 2f;
 
     [Header("UI")]
     public UIManager uiManager;
@@ -54,7 +54,7 @@ public class StackManager : MonoBehaviour
     private bool _bMoveCamera = false;
 
     // 게임 플레이 플래그
-    private bool _bPlayGame = false;
+    // private bool _bPlayGame = false;
 
     // 메인 카메라 정보 캐싱
     private Camera _mainCam = null;
@@ -65,7 +65,7 @@ public class StackManager : MonoBehaviour
     private int _comboCnt = 0;
     private float _nextBlockScaleX = 0f;
     private float _nextBlockScaleZ = 0f;
-    private const float _comboGrowthRate = 1.2f;  // 콤보 성장률 10%
+    private const float _comboGrowthRate = 1.2f;  // 콤보 성장률 20%
     private const float _maxComboGrowth = 0.2f;  // 콤보당 최대 성장량
 
     // 카메라 이동
@@ -75,6 +75,8 @@ public class StackManager : MonoBehaviour
 
     void Start()
     {
+        Application.targetFrameRate = 60;
+
         // 메인 카메라 캐싱
         _mainCam = Camera.main;
         // 카메라 위치 저장
@@ -84,6 +86,9 @@ public class StackManager : MonoBehaviour
         // 게임 플레이 버튼 이벤트 연결
         uiManager.btnStartGame.onClick.AddListener(StartGame);
 
+        // 블록 배치 버튼 이벤트 연결
+        uiManager.btnPlaceBlock.onClick.AddListener(PlaceBlock);
+
         // 재시작 버튼 이벤트 연결
         uiManager.btnRestart.onClick.AddListener(ResetGame);
 
@@ -91,23 +96,6 @@ public class StackManager : MonoBehaviour
 
         // 콤보 설정 초기화
         _comboCnt = 0;
-    }
-
-    void Update()
-    {
-        // 게임 플레이 상태 아니면 탭 인식 x
-        if (false == _bPlayGame) return;
-
-        bool isMouseTouched = Input.GetMouseButtonDown(0) && !UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject();
-        bool isMobileTouched = Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began && !UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(Input.GetTouch(0).fingerId);
-        bool test = Input.GetKeyDown(KeyCode.Space);
-        bool bTapped = isMouseTouched || isMobileTouched || test;
-
-        if (bTapped && _currentBlock != null)
-        {
-            PlaceBlock();
-        }
-
     }
 
     void LateUpdate()
@@ -121,20 +109,25 @@ public class StackManager : MonoBehaviour
 
     private void StartGame()
     {
-        // 홈 화면 패널 숨기기
-        uiManager.panelHome.SetActive(false);
+        // _bPlayGame = true;  // 게임 플레이 플래그 on
 
-        // 배경음 줄이기
+        // 홈 패널 숨기기
+        uiManager.panelHome.SetActive(false);
+        // 인게임 페널 활성화
+        uiManager.panelInGame.SetActive(true);
+
+        // 배경음 시작 (첫 인터랙션 후 재생 — WebGL 자동재생 정책 우회)
+        if (SoundManager.Instance.clipMainBGM != null)
+            SoundManager.Instance.PlayBGM(SoundManager.Instance.clipMainBGM);
         SoundManager.Instance.FadeBGMVolume(0.15f, 1f);
 
-        _bPlayGame = true;  // 게임 플레이 플래그 on
-        SpawnNext();        // 첫 번째 움직이는 블록
+        SpawnNext();        // 첫 번째 움직이는 블록 생성
     }
 
     // 바닥 블록 (움직이지 않는 기준 블록) 생성
     void SetupBaseBlock()
     {
-        _lastBlock = objBaseBlock.AddComponent<Block>();
+        _lastBlock = objBaseBlock.GetComponent<Block>() ?? objBaseBlock.AddComponent<Block>();
         objBaseBlock.GetComponent<Renderer>().material.color = Color.white;
         _currentY = blockHeight / 2f;  // 다음 블록 Y 위치
 
@@ -146,6 +139,9 @@ public class StackManager : MonoBehaviour
     // 탭 시: 겹침 계산 → 자르기 → 다음 블록 생성
     void PlaceBlock()
     {
+        // 게임중 아니면 무시
+        // if(!_bPlayGame) return;
+
         // 1. 현재 블록 이동 중단
         _currentBlock.GetComponent<BlockMover>().Stop();
 
@@ -235,6 +231,12 @@ public class StackManager : MonoBehaviour
         // 효과음 재생
         SoundManager.Instance.PlaySFX(SoundManager.Instance.clipBlockPlace);
 
+        // 햅틱 (PERFECT는 PerfectEffect()에서 처리)
+        if (_placeState == EPlaceState.BAD)
+            HapticManager.Vibrate(HapticManager.HapticType.Error);
+        else if (_placeState == EPlaceState.GOOD)
+            HapticManager.Vibrate(HapticManager.HapticType.SoftMedium);
+
         // 떡 효과
         _currentBlock.PlayBounceEffect();
         DisplayPixelBattelText(_placeState);    // BattleTextAnimation 출력
@@ -285,28 +287,12 @@ public class StackManager : MonoBehaviour
             new Vector3(b.min.x, b.min.y, b.max.z),
         };
 
-        // 디버깅용 Cube 생성 로직
-        /* int idx = 0;
-        foreach (Vector3 pos in outlinePoints)
-        {
-            GameObject marker = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            marker.transform.SetParent(objBlockContainer.transform);
-            marker.name = "Debris";
-            marker.GetComponent<Renderer>().material.color = Color.red;
-            marker.transform.localScale = new Vector3(0.05f, 0.05f, 0.05f);
-            marker.transform.position = pos;
-
-            Debug.Log($"[{idx++}] : {_mainCam.WorldToViewportPoint(pos)}");
-        } */
-
-
         // 카메라 Projection Size 변경
         foreach (Vector3 pos in outlinePoints)
         {
             Vector3 vp = _mainCam.WorldToViewportPoint(pos);
             if (vp.x > 1f || vp.x < 0f)
             {
-                // Debug.Log("Camera Projection Size UP!!!");
                 float curSize = _mainCam.orthographicSize;
                 _mainCam.DOOrthoSize(++curSize, 1f).SetEase(Ease.OutCubic);
                 return;
@@ -334,7 +320,8 @@ public class StackManager : MonoBehaviour
     void PerfectEffect()
     {
         Debug.Log("Perfect");
-        // 이펙트 
+        HapticManager.Vibrate(HapticManager.HapticType.BasicMedium);
+        // 이펙트
         PlayStackEffect(_currentBlock.transform.localPosition);
     }
 
@@ -415,7 +402,7 @@ public class StackManager : MonoBehaviour
         Debug.Log("Game Over!");
 
         // 게임 플레이 플래그 off
-        _bPlayGame = false;
+        // _bPlayGame = false;
 
         // 카메라 이동
         ShowFullStack();
@@ -424,9 +411,11 @@ public class StackManager : MonoBehaviour
         _currentBlock.GetComponent<BlockMover>().Stop();
         _currentBlock = null;
 
-
         // 콤보 값 초기화
         _comboCnt = 0;
+        
+        // 인게임 페널 숨김
+        uiManager.panelInGame.SetActive(false);
 
         // 게임 종료 패널 표시
         uiManager.ShowGameOver(_score);
@@ -505,7 +494,7 @@ public class StackManager : MonoBehaviour
 
     private void DisplayPixelBattelText(EPlaceState state)
     {
-        Vector2 viewportPosition = Camera.main.WorldToViewportPoint(_currentBlock.transform.localPosition + new Vector3(0f, 0.5f, 0f));
+        Vector2 viewportPosition = Camera.main.WorldToViewportPoint(_currentBlock.transform.position + new Vector3(0f, 0.5f, 0f));
         viewportPosition.x = 0.5f;
 
         if (state == EPlaceState.GOOD)

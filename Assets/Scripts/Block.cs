@@ -9,14 +9,11 @@ public class Block : MonoBehaviour
     public float PosX => transform.position.x;
     public float PosZ => transform.position.z;
 
-    // private float _debrisSize = -1;
-
     // 블록 초기화 - StackManager에서 호출
     public void Init(Vector3 pos, Vector3 scale, Color color)
     {
         transform.position = pos;
         transform.localScale = scale;
-        // GetComponent<Renderer>().material.color = color;
         GetComponent<Renderer>().material.SetColor("_BaseColor", color);
     }
 

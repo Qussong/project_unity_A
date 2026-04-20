@@ -30,8 +30,8 @@ public class SoundManager : MonoBehaviour
 
     void Start()
     {
-        if (clipMainBGM != null)
-            PlayBGM(clipMainBGM);
+        // WebGL 자동재생 정책: 사용자 인터랙션 후 재생해야 함
+        // StartGame() 또는 첫 터치 시 PlayBGM() 호출할 것
     }
 
     public bool IsMuted { get; private set; } = false;
@@ -42,7 +42,8 @@ public class SoundManager : MonoBehaviour
 
         _asBGM.mute = IsMuted;
         _asSFX.mute = IsMuted;
-        OnMuteChanged.Invoke(IsMuted);
+        _asUI.mute = IsMuted;
+        OnMuteChanged?.Invoke(IsMuted);
     }
 
     public void FadeBGMVolume(float target, float duration)
